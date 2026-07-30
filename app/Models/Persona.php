@@ -2,113 +2,77 @@
 
 namespace App\Models;
 
-use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
-class Persona extends Authenticatable
+class Persona extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'personas';
 
     protected $fillable = [
-        'nombres',
-        'apellidos',
-        'cedula',
-        'telefono',
-        'email',
-        'password',
-        'sexo',
-        'foto',
-        'cedula_imagen',
-        'verificado',
-        'activo',
-    ];
-
-    protected $hidden = [
-        'password',
-        'remember_token',
+        'nombres','apellidos','cedula','telefono','sexo','foto','cedula_imagen','verified_at'
     ];
 
     protected $casts = [
-        'verificado' => 'boolean',
-        'activo' => 'boolean',
+        'verified_at' => 'datetime',
     ];
 
-    // Roles de la persona
-    public function roles(): BelongsToMany
+    // ==========================================
+    // RELACIONES DE NEGOCIO
+    // ==========================================
+
+    public function usuario()
     {
-        return $this->belongsToMany(Rol::class, 'persona_rol');
+        return $this->hasOne(Usuario::class, 'persona_id');
     }
 
-    // Si es estudiante, puede tener datos extendidos
-    public function estudiante(): HasOne
+    public function curriculum()
     {
-        return $this->hasOne(Estudiante::class);
+        return $this->hasOne(Curriculum::class, 'persona_id');
     }
 
-    // Inscripciones a actividades
-    public function inscripciones(): HasMany
+    public function roles()
     {
-        return $this->hasMany(Inscripcion::class);
+        return $this->belongsToMany(Role::class, 'persona_rol', 'persona_id', 'rol_id')
+            ->withPivot(['asignado_por','activo','asignado_en'])
+            ->withTimestamps();
     }
 
-    // Asistencias registradas
-    public function asistencias(): HasMany
+    public function personaRols()
     {
-        return $this->hasMany(Asistencia::class);
+        return $this->hasMany(PersonaRol::class, 'persona_id');
     }
 
-    // Certificados recibidos
-    public function certificados(): HasMany
+    public function documentosExpediente()
     {
-        return $this->hasMany(Certificado::class);
+        return $this->hasMany(DocumentoExpediente::class, 'subido_por');
     }
 
-    // Sesiones como ponente (vía tabla pivote)
-    public function sesionesComoPonente(): BelongsToMany
+    public function docentes()
     {
-        return $this->belongsToMany(Sesion::class, 'ponente_sesion')
-                    ->using(PonenteSesion::class)
-                    ->withPivot('rol');
+        return $this->hasOne(Docente::class, 'persona_id');
     }
 
-    // Solicitudes de inducción (si es estudiante)
-    public function solicitudesInduccion(): HasMany
+    public function estudiante()
     {
-        return $this->hasMany(SolicitudInduccion::class, 'estudiante_id');
+        return $this->hasOne(Estudiante::class, 'persona_id');
     }
 
-    // Tutorías donde es tutor
-    public function tutoriasAsignadas(): HasMany
+    public function empleado()
     {
-        return $this->hasMany(TutoresAsignado::class, 'tutor_id');
+        return $this->hasOne(Empleado::class, 'persona_id');
     }
 
-    // Cartas de pasantía emitidas para este estudiante
-    public function cartasPasantia(): HasMany
+    public function asistencias()
     {
-        return $this->hasMany(CartaPasantia::class, 'estudiante_id');
+        return $this->hasMany(Asistencia::class, 'persona_id');
     }
 
-    // Respuestas a encuestas
-    public function respuestasEncuesta(): HasMany
+    public function certificados()
     {
-        return $this->hasMany(RespuestaEncuesta::class);
-    }
-
-    // Solicitud de empleo (para ser docente)
-    public function solicitudEmpleo(): HasOne
-    {
-        return $this->hasOne(SolicitudEmpleo::class);
-    }
-
-    // Currículum (si es docente)
-    public function curriculum(): HasOne
-    {
-        return $this->hasOne(Curriculum::class);
+        return $this->hasMany(Certificado::class, 'persona_id');
     }
 }

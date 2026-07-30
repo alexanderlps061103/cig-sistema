@@ -2,30 +2,42 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Estudiante extends Model
 {
     use HasFactory;
 
     protected $table = 'estudiantes';
-
-    protected $fillable = [
-        'persona_id',
-        'carrera',
-        'carnet_estudiantil',
-        'carta_aprobacion_induccion',
-        'es_regular',
-    ];
+    protected $fillable = ['persona_id','carrera_id','modalidad_egreso','es_regular'];
 
     protected $casts = [
         'es_regular' => 'boolean',
     ];
 
-    public function persona(): BelongsTo
+    public function persona()
     {
-        return $this->belongsTo(Persona::class);
+        return $this->belongsTo(Persona::class, 'persona_id');
+    }
+
+    public function carrera()
+    {
+        return $this->belongsTo(Carrera::class, 'carrera_id');
+    }
+
+    public function expediente()
+    {
+        return $this->hasOne(ExpedienteEstudiante::class, 'estudiante_id');
+    }
+
+    public function inducciones()
+    {
+        return $this->hasMany(Induccion::class, 'estudiante_id');
+    }
+
+    public function cartasPasantia()
+    {
+        return $this->hasMany(CartaPasantia::class, 'estudiante_id');
     }
 }

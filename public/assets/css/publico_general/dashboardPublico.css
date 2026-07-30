@@ -1,0 +1,404 @@
+/* ==========================================================================
+   HOJA DE ESTILOS - DASHBOARD PÚBLICO (MODULAR)
+   ========================================================================== */
+
+.dashboard-container {
+    padding: var(--space-lg);
+    width: 100%;
+}
+
+/* Banner superior */
+.welcome-banner {
+    background: linear-gradient(135deg, var(--color-brand-blue), var(--color-brand-cyan));
+    color: var(--color-badge-text);
+    padding: var(--space-xl);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-lg);
+    box-shadow: 0 4px 12px rgba(35, 55, 140, 0.15);
+}
+
+.welcome-banner h1 {
+    font-size: var(--text-xl);
+    margin-bottom: var(--space-sm);
+}
+
+.welcome-banner p {
+    font-size: var(--text-base);
+    opacity: 0.9;
+}
+
+/* Barra de título y Filtro */
+.section-title-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-lg);
+    border-bottom: 2px solid var(--color-border);
+    padding-bottom: var(--space-md);
+    flex-wrap: wrap;
+    gap: var(--space-df);
+}
+
+.section-title-bar h2 {
+    font-size: var(--text-lg);
+    color: var(--color-text-main);
+}
+
+.search-filter-wrapper {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.search-input {
+    padding: var(--space-sm) var(--space-df);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    width: 240px;
+    transition: border-color var(--transition-speed);
+}
+
+.search-input:focus {
+    border-color: var(--color-brand-blue);
+}
+
+/* Grid de Actividades */
+.activities-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--space-lg);
+}
+
+/* Tarjeta de Actividad */
+.activity-card {
+    background: var(--color-bg-sidebar);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+}
+
+.activity-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+}
+
+.activity-card-header {
+    background: var(--color-hover-bg);
+    padding: var(--space-df);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.activity-tag {
+    font-size: var(--text-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--color-brand-cyan);
+    background: #f0f9ff;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    display: inline-block;
+    margin-bottom: var(--space-sm);
+}
+
+.activity-title {
+    font-size: var(--text-md);
+    font-weight: 700;
+    color: var(--color-text-main);
+}
+
+.activity-card-body {
+    padding: var(--space-df);
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.info-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+}
+
+.info-row i {
+    color: var(--color-brand-blue);
+    width: 16px;
+    text-align: center;
+}
+
+.activity-card-footer {
+    padding: var(--space-df);
+    background: var(--color-hover-bg);
+    border-top: 1px solid var(--color-border);
+}
+
+/* Botones de acción */
+.btn-action {
+    width: 100%;
+    padding: var(--space-sm) var(--space-df);
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: var(--text-base);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--transition-speed), color var(--transition-speed);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+}
+
+.btn-view-details {
+    background: var(--color-brand-blue);
+    color: var(--color-badge-text);
+}
+
+.btn-view-details:hover {
+    background: #1e2e73;
+}
+
+.btn-register-action {
+    background: var(--color-brand-green);
+    color: var(--color-badge-text);
+}
+
+.btn-register-action:hover {
+    background: #008f44;
+}
+
+.btn-registered {
+    background: var(--color-border);
+    color: var(--color-text-muted);
+    cursor: not-allowed;
+}
+
+.no-activities {
+    text-align: center;
+    padding: var(--space-xl);
+    background: var(--color-bg-sidebar);
+    border-radius: var(--radius-lg);
+    border: 2px dashed var(--color-border);
+    color: var(--color-text-muted);
+}
+
+.no-activities i {
+    font-size: var(--text-xxl);
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-df);
+}
+
+/* ==========================================================================
+   ALERTAS ABSOLUTAS FLOTANTES (No desplazan el HTML)
+   ========================================================================== */
+.alerts-container {
+    position: fixed;
+    top: var(--space-df);
+    right: var(--space-df);
+    z-index: 1100;
+    width: 350px;
+    pointer-events: none;
+}
+
+.alert-message {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-df);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-sm);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    animation: slideIn var(--transition-speed) ease forwards;
+    transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.success-alert {
+    background-color: #f0fdf4;
+    border-left: 4px solid var(--color-brand-green);
+    color: #166534;
+}
+
+.error-alert {
+    background-color: var(--color-danger-hover);
+    border-left: 4px solid var(--color-danger-text);
+    color: #991b1b;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* ==========================================================================
+   MODALES (ESTRUCTURA DE SUPERPOSICIÓN)
+   ========================================================================== */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1050;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-speed) ease;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal-container {
+    background: var(--color-bg-sidebar);
+    border-radius: var(--radius-lg);
+    width: 90%;
+    max-width: 520px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    transform: translateY(-30px);
+    transition: transform var(--transition-speed) ease;
+}
+
+.modal-overlay.active .modal-container {
+    transform: translateY(0);
+}
+
+.modal-header {
+    background: var(--color-hover-bg);
+    padding: var(--space-df);
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: var(--text-lg);
+    color: var(--color-text-main);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: var(--text-xl);
+    cursor: pointer;
+    color: var(--color-text-muted);
+}
+
+.modal-body {
+    padding: var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-df);
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.detail-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-df);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-row i {
+    color: var(--color-brand-blue);
+    font-size: var(--text-md);
+    margin-top: 2px;
+    width: 20px;
+    text-align: center;
+}
+
+.detail-row strong {
+    font-size: var(--text-sm);
+    color: var(--color-text-main);
+    display: block;
+    margin-bottom: var(--space-xs);
+}
+
+.detail-row p {
+    font-size: var(--text-base);
+    color: var(--color-text-muted);
+    margin: 0;
+}
+
+.modal-footer {
+    background: var(--color-hover-bg);
+    padding: var(--space-df) var(--space-lg);
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-sm);
+}
+
+.btn-cancel {
+    background: var(--color-border);
+    color: var(--color-text-main);
+}
+
+.btn-cancel:hover {
+    background: #cbd5e1;
+}
+
+/* ==========================================================================
+   ESTADOS DE VALIDACIÓN VISUAL EN ENTRADAS (Asistencia visual)
+   ========================================================================== */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.form-group label {
+    font-weight: 600;
+    font-size: var(--text-sm);
+    color: var(--color-text-main);
+}
+
+.form-group input {
+    padding: var(--space-sm);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: var(--text-base);
+    transition: border-color var(--transition-speed);
+}
+
+/* Clases de colores de validación */
+.val-red {
+    border-color: var(--color-danger-text) !important;
+    background-color: var(--color-danger-hover) !important;
+}
+
+.val-yellow {
+    border-color: #eab308 !important; /* Yellow-500 */
+    background-color: #fef9c3 !important; /* Yellow-100 */
+}
+
+.val-green {
+    border-color: var(--color-brand-green) !important;
+    background-color: #f0fdf4 !important; /* Green-100 */
+}

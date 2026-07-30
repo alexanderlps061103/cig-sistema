@@ -1,0 +1,66 @@
+/* ==========================================================================
+   VERIFICACIÓN DE ACTIVIDADES – Estilos Rector
+   ========================================================================== */
+
+.report-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.chart-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 1rem;
+    border: 1px solid var(--color-border);
+}
+
+.chart-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    color: var(--color-text-main);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Barras de estadísticas simples con CSS */
+.stat-bar-container { margin-bottom: 1rem; }
+.stat-bar-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    margin-bottom: 0.4rem;
+}
+.stat-bar-bg {
+    height: 10px;
+    background: #f1f5f9;
+    border-radius: 5px;
+    overflow: hidden;
+}
+.stat-bar-fill {
+    height: 100%;
+    background: var(--color-primary);
+    border-radius: 5px;
+}
+
+/* Badge de Verificación */
+.badge-verificado {
+    background: #d1fae5;
+    color: #065f46;
+    padding: 0.2rem 0.6rem;
+    border-radius: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.badge-pendiente {
+    background: #ffedd5;
+    color: #9a3412;
+    padding: 0.2rem 0.6rem;
+    border-radius: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+}

@@ -1,0 +1,257 @@
+/* ==========================================================================
+   ESTILOS DE LA PÁGINA DE DOCENTE INVITADO (AUTÓNOMO / PÚBLICO)
+   ========================================================================== */
+
+/* Contenedor principal de pantalla completa (Estilo Auth) */
+.auth-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    width: 100vw;
+    background-color: var(--color-bg-body);
+    padding: var(--space-lg);
+}
+
+/* Tarjeta de registro (Split en pantallas grandes) */
+.register-card {
+    display: flex;
+    background-color: var(--color-bg-sidebar);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 
+                0 8px 10px -6px rgba(0, 0, 0, 0.05);
+    width: 100%;
+    max-width: 960px;
+    min-height: 550px;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+}
+
+/* Columna Izquierda: Logo y Branding */
+.register-logo-col {
+    width: 40%;
+    background: radial-gradient(circle at top left, var(--color-brand-cyan), var(--color-brand-blue));
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: var(--space-xl);
+    position: relative;
+}
+
+/* Decoración estética en la columna del logo */
+.register-logo-col::after {
+    content: '';
+    position: absolute;
+    width: 150%;
+    height: 150%;
+    background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 70%);
+    top: -50%;
+    left: -50%;
+    pointer-events: none;
+}
+
+.register-logo-img {
+    width: 100%;
+    max-width: 180px;
+    height: auto;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+    z-index: 2;
+}
+
+/* Columna Derecha: Formulario */
+.register-form-col {
+    width: 60%;
+    padding: var(--space-xl);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+/* Encabezado */
+.register-header {
+    text-align: center;
+    margin-bottom: var(--space-lg);
+}
+
+.register-title {
+    font-size: var(--text-xl);
+    color: var(--color-brand-blue);
+    font-weight: 700;
+    margin-bottom: var(--space-xs);
+    letter-spacing: -0.025em;
+}
+
+/* Contenedor interno con scroll para mantener la tarjeta fija */
+.form-scroll-container {
+    max-height: 380px;
+    overflow-y: auto;
+    padding-right: var(--space-sm);
+    margin-bottom: var(--space-lg);
+}
+
+/* Personalización del Scrollbar */
+.form-scroll-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.form-scroll-container::-webkit-scrollbar-track {
+    background: var(--color-hover-bg);
+    border-radius: var(--radius-sm);
+}
+
+.form-scroll-container::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: var(--radius-sm);
+}
+
+.form-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-muted);
+}
+
+/* Filas y columnas adaptables de campos */
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-df);
+    margin-bottom: var(--space-df);
+}
+
+.form-group-custom {
+    margin-bottom: var(--space-df);
+    position: relative; /* Clave para posicionar el buscador dinámico */
+}
+
+/* Etiquetas y controles personalizados */
+.form-label-custom {
+    display: block;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    font-weight: 600;
+    margin-bottom: var(--space-xs);
+}
+
+.form-input-custom {
+    width: 100%;
+    padding: 1rem var(--space-md);
+    font-size: var(--text-base);
+    color: var(--color-text-main);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background-color: var(--color-bg-sidebar);
+    transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
+}
+
+.form-input-custom:focus {
+    border-color: var(--color-brand-blue);
+    box-shadow: 0 0 0 3px rgba(35, 55, 140, 0.1);
+}
+
+/* Buscador dinámico de profesiones */
+.search-select-wrapper {
+    position: relative;
+}
+
+.search-select-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: var(--color-bg-sidebar);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    max-height: 180px;
+    overflow-y: auto;
+    z-index: 50;
+    margin-top: 4px;
+}
+
+.search-select-option {
+    padding: 1rem var(--space-md);
+    font-size: var(--text-base);
+    color: var(--color-text-main);
+    cursor: pointer;
+    transition: background-color var(--transition-speed);
+}
+
+.search-select-option:hover {
+    background-color: var(--color-hover-bg);
+    color: var(--color-brand-blue);
+}
+
+/* Botón de envío */
+.btn-submit-custom {
+    width: 100%;
+    background-color: var(--color-brand-blue);
+    color: #ffffff;
+    font-size: var(--text-base);
+    font-weight: 600;
+    padding: 1.2rem;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background-color var(--transition-speed), transform 0.1s ease;
+}
+
+.btn-submit-custom:hover {
+    background-color: #1a2a70;
+}
+
+.btn-submit-custom:active {
+    transform: scale(0.98);
+}
+
+/* Alertas de Estado */
+.alert {
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-df);
+    font-size: var(--text-sm);
+    text-align: center;
+}
+
+.alert-success {
+    background-color: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.alert-danger {
+    background-color: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+/* ==========================================================================
+   RESPONSIVIDAD Y ADAPTACIÓN MÓVIL
+   ========================================================================== */
+@media (max-width: 768px) {
+    .register-card {
+        flex-direction: column;
+        max-width: 480px;
+    }
+
+    .register-logo-col {
+        width: 100%;
+        padding: var(--space-lg);
+    }
+
+    .register-logo-img {
+        max-width: 110px;
+    }
+
+    .register-form-col {
+        width: 100%;
+        padding: var(--space-lg);
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+        margin-bottom: 0;
+    }
+    
+    .form-row > div {
+        margin-bottom: var(--space-df);
+    }
+}

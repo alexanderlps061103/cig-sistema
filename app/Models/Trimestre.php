@@ -2,38 +2,33 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Trimestre extends Model
-{
-    use HasFactory;
-
+class Trimestre extends Model {
     protected $table = 'trimestres';
-
+    protected $primaryKey = 'id_trimestre';
+    
     protected $fillable = [
-        'nombre',
-        'fecha_inicio',
-        'fecha_fin',
-        'activo',
-        'creado_por',
+        'nombre', 
+        'fecha_inicio', 
+        'fecha_fin', 
+        'id_planificacion'
     ];
 
     protected $casts = [
         'fecha_inicio' => 'date',
-        'fecha_fin' => 'date',
-        'activo' => 'boolean',
+        'fecha_fin'    => 'date',
     ];
 
-    public function creadoPor(): BelongsTo
-    {
-        return $this->belongsTo(Persona::class, 'creado_por');
+    public function planificacion(): BelongsTo {
+        // Se definen explícitamente (ModeloRelacionado, Foreign Key, Owner Key)
+        return $this->belongsTo(Planificacion::class, 'id_planificacion', 'id_planificacion');
     }
 
-    public function actividades(): HasMany
-    {
-        return $this->hasMany(Actividad::class);
+    public function actividades(): HasMany {
+        // Se definen explícitamente (ModeloRelacionado, Foreign Key, Local Key)
+        return $this->hasMany(Actividad::class, 'id_trimestre', 'id_trimestre');
     }
 }

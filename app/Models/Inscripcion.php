@@ -2,34 +2,37 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Inscripcion extends Model
 {
-    use HasFactory;
-
     protected $table = 'inscripciones';
-
+    protected $primaryKey = 'id_inscripcion';
     protected $fillable = [
-        'persona_id',
-        'actividad_id',
-        'fecha_inscripcion',
-        'estado',
+        'fecha_registro', 
+        'id_estudiante', 
+        'id_publico_general', 
+        'id_asistencia', 
+        'id_actividad', 
+        'id_documento', 
+        'estado'
     ];
 
-    protected $casts = [
-        'fecha_inscripcion' => 'datetime',
-    ];
-
-    public function persona(): BelongsTo
+    // Relación con el estudiante (si aplica)
+    public function estudiante()
     {
-        return $this->belongsTo(Persona::class);
+        return $this->belongsTo(Estudiante::class, 'id_estudiante');
     }
 
-    public function actividad(): BelongsTo
+    // Relación con la persona física (si es público general)
+    public function publicoGeneral()
     {
-        return $this->belongsTo(Actividad::class);
+        return $this->belongsTo(Persona::class, 'id_publico_general', 'id');
+    }
+
+    // Relación con la actividad
+    public function actividad()
+    {
+        return $this->belongsTo(Actividad::class, 'id_actividad', 'id_actividad');
     }
 }

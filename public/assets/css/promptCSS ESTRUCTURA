@@ -1,0 +1,51 @@
+Actúa como un desarrollador Frontend experto en CSS puro y maquetación responsiva. Estoy trabajando en un sistema web desarrollado en Laravel que utiliza una arquitectura CSS modular.
+
+Tengo un conjunto de reglas de diseño estrictas que se deben aplicar obligatoriamente al corregir o crear mis archivos CSS. Te proporcionaré mi código base, y tu objetivo es adaptarlo para que se renderice correctamente en computadoras de escritorio (como resoluciones de 1680x1050) y se adapte proporcionalmente en laptops (como resoluciones de 1280x800 y 1280x720) sin romper el diseño.
+
+Por favor, sigue estas pautas técnicas de forma estricta:
+
+1. CONFIGURACIÓN RAÍZ Y ESCALADO (FLUID SCALING):
+   - El sistema utiliza styleBase.css donde '1rem = 12px' en pantallas grandes, pero se escala a '1rem = 11px' en pantallas menores o iguales a 1366px de ancho.
+   - Diseña todas las dimensiones (paddings, margins, gaps, font-sizes) usando la unidad 'rem'.
+
+2. REGLA OBLIGATORIA DE COLAPSO (SIDEBAR COLLAPSED):
+   - Si el CSS que vas a escribir maneja el contenedor principal '.main-content', es obligatorio incluir la regla de transición cuando la barra lateral se colapsa:
+     .sidebar.collapsed + .main-content {
+         margin-left: var(--sidebar-width-collapsed);
+         width: calc(100% - var(--sidebar-width-collapsed));
+     }
+   - Esto evita que quede un espacio en blanco o desajustado cuando el usuario oculta o colapsa el menú lateral.
+
+3. DISPOSITIVOS MÓVILES Y TABLETAS (BREAKPOINT SEGURO):
+   - El modo móvil/tablet (donde la barra lateral se oculta por completo y aparece el menú hamburguesa superior) se debe activar estrictamente a los "1024px" fijos, usando:
+     @media (max-width: 1024px)
+   - Evita usar medidas en 'rem' para este breakpoint (como '102.4rem'), ya que el escalado dinámico del root puede provocar que el diseño móvil se active antes de tiempo en laptops de 1280px.
+
+4. OPTIMIZACIÓN INTERMEDIA PARA LAPTOPS (1280px a 1366px):
+   - Siempre debes incluir una media query intermedia:
+     @media (max-width: 1366px)
+   - En este bloque debes:
+     a) Reducir los paddings excesivos de '.main-content' (por ejemplo, de '4rem' a '2rem' o '2.5rem').
+     b) Si hay un dashboard con estructura de dos columnas ('.dashboard-grid'), ajusta la columna lateral (filtros o paneles) de '30rem' a '24rem' o '25rem' para darle prioridad de espacio al contenido principal (calendarios, tablas o gráficos).
+     c) Ajustar ligeramente los paddings y gaps de tarjetas internas (como '.kpi-card' o '.panel-section').
+
+5. GRILLES DE MÉTRICAS (KPIs):
+   - Si el diseño incluye una grilla de métricas (por ejemplo, '.kpi-grid'), en pantallas de PC debe forzarse a mantenerse en una sola fila (por ejemplo, 'grid-template-columns: repeat(4, 1fr)').
+   - Solo se debe permitir que la grilla colapse en múltiples filas mediante 'auto-fit' dentro de la media query móvil de '@media (max-width: 1024px)'.
+
+6. MODALIZACIÓN Y VARIABLES CSS:
+   - Utiliza las variables globales definidas en ':root' (como '--color-brand-blue', '--color-text-main', '--color-border', '--transition-speed').
+   - Mantén los comentarios estructurales en el código CSS para separar las secciones del archivo.
+
+A continuación, te proporciono el código CSS que necesito que [CORRIJAS / CREES DESDE CERO]. Por favor, devuélveme el código completo y optimizado estructurado por secciones:
+
+[PEGA TU CÓDIGO O DETALLA LO QUE DEBE HACER EL NUEVO CSS AQUÍ]
+
+¿Cómo utilizar este prompt en el futuro?
+Abre un nuevo chat con tu asistente de IA.
+Copia el prompt de arriba en el cuadro de entrada de texto.
+En la última línea, entre los corchetes [...], pega el código CSS de la vista que quieres 
+corregir o explica detalladamente qué componentes debe tener tu nuevo archivo CSS 
+(por ejemplo, "un formulario de registro de docentes con 3 campos y un botón").
+Envía el mensaje. La IA te entregará un código CSS modular que se integrará con 
+tu styleBase.css y menu.css respetando el sistema de medidas y los breakpoints que acordamos.

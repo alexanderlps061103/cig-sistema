@@ -1,0 +1,78 @@
+:root {
+    --holiday-red: #ef4444;
+    --holiday-bg: #fef2f2;
+}
+
+.calendar-wrapper {
+    background: #fff;
+    border-radius: 1.5rem;
+    border: 1px solid #e2e8f0;
+    padding: 2rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+/* Selector de Periodo */
+.period-selector-card {
+    background: #f8fafc;
+    padding: 1.5rem;
+    border-radius: 1rem;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 1px solid #e2e8f0;
+}
+
+/* Grid de Feriados */
+.feriados-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.feriado-card {
+    border: 1px solid #fee2e2;
+    background: white;
+    border-radius: 1rem;
+    padding: 1.2rem;
+    position: relative;
+    transition: all 0.3s ease;
+    border-left: 5px solid var(--holiday-red);
+}
+
+.feriado-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
+}
+
+.feriado-date {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--holiday-red);
+    display: block;
+}
+
+.feriado-desc {
+    font-size: 0.9rem;
+    color: #475569;
+    margin-top: 5px;
+    font-weight: 600;
+}
+
+.recurrente-badge {
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 0.65rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+/* Interruptor (Toggle) para Recurrente en el Modal */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+}

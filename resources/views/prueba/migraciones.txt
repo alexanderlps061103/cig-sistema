@@ -1,0 +1,1244 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('personas', function (Blueprint $table) {
+            $table->id();
+            $table->string('nombres');
+            $table->string('apellidos');
+            $table->string('cedula')->nullable()->unique();
+            $table->string('telefono')->nullable();
+            $table->enum('sexo', ['M', 'F', 'Otro'])->nullable();
+            $table->string('foto')->nullable();
+            $table->string('cedula_imagen')->nullable();
+            $table->timestamp('verified_at')->nullable();
+            $table->softDeletes();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('personas');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('roles', function (Blueprint $table) {
+            $table->id();
+            $table->string('nombre')->unique(); // rector, coordinador, docente, estudiante, publico
+            $table->string('descripcion')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('roles');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('cargos', function (Blueprint $table) {
+            $table->id();
+            $table->string('nombre')->unique();
+            $table->boolean('estado')->default(true);
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('cargos');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('profesiones', function (Blueprint $table) {
+            $table->id();
+            $table->string('nombre')->unique(); // Ej: Nutricionista, Chef
+            $table->text('descripcion')->nullable();
+            $table->boolean('estado')->default(true);
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('profesiones');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('carreras', function (Blueprint $table) {
+            $table->id();
+            $table->string('nombre');
+            $table->text('descripcion')->nullable();
+            $table->boolean('estado')->default(true);
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('carreras');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('persona_rol', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('persona_id')->constrained('personas')->cascadeOnDelete();
+            $table->foreignId('rol_id')->constrained('roles')->cascadeOnDelete();
+            $table->foreignId('asignado_por')->nullable()->constrained('personas')->nullOnDelete();
+            $table->boolean('activo')->default(true);
+            $table->timestamp('asignado_en')->nullable();
+            $table->unique(['persona_id', 'rol_id']);
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('persona_rol');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('usuarios', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('persona_id')->constrained('personas')->cascadeOnDelete();
+            $table->string('email')->unique();
+            $table->string('password');
+            $table->boolean('verificado')->default(false);
+            $table->boolean('activo')->default(true);
+            $table->foreignId('aprobado_por')->nullable()->constrained('personas')->nullOnDelete();
+            $table->timestamp('aprobado_at')->nullable();
+            $table->rememberToken();
+            $table->softDeletes();
+            $table->timestamps();
+
+            $table->index(['email', 'activo']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('usuarios');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('empleados', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('persona_id')->unique()->constrained('personas')->cascadeOnDelete();
+            $table->foreignId('cargo_id')->constrained('cargos');
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('empleados');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('docentes', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('persona_id')->unique()->constrained('personas')->cascadeOnDelete();
+             $table->foreignId('profesion_id')->nullable()->constrained('profesiones')->nullOnDelete();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('docentes');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('estudiantes', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('persona_id')->unique()->constrained('personas')->cascadeOnDelete();
+            $table->unsignedBigInteger('carrera_id')->nullable();
+            $table->enum('modalidad_egreso', ['pasantia', 'acreditacion'])->nullable();
+            $table->boolean('es_regular')->default(false);
+            $table->timestamps();
+
+            $table->foreign('carrera_id')->references('id')->on('carreras')->nullOnDelete();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('estudiantes');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('expedientes_estudiante', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('estudiante_id')->unique()->constrained('estudiantes')->cascadeOnDelete();
+            $table->foreignId('carrera_id')->nullable()->constrained('carreras')->nullOnDelete();
+            $table->string('ruta_carnet')->nullable();
+            $table->timestamp('carnet_verificado_at')->nullable();
+            $table->string('ruta_notas_certificadas')->nullable();
+            $table->timestamp('notas_verificadas_at')->nullable();
+            $table->enum('tipo_solicitud', ['induccion', 'equivalencia'])->nullable();
+            $table->enum('estado_solicitud', ['pendiente', 'aprobado', 'rechazado', 'en_pasantias', 'acreditado'])->default('pendiente');
+            $table->unsignedBigInteger('tutor_asignado_id')->nullable();
+            $table->text('observaciones')->nullable();
+            $table->timestamps();
+
+            $table->foreign('tutor_asignado_id')->references('id')->on('docentes')->nullOnDelete();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('expedientes_estudiante');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('documentos_expediente', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('expediente_id')->constrained('expedientes_estudiante')->cascadeOnDelete();
+            $table->enum('tipo_documento', ['carnet', 'notas', 'certificado', 'otro']);
+            $table->string('ruta_archivo');
+            $table->string('mime')->nullable();
+            $table->unsignedBigInteger('subido_por')->nullable();
+            $table->timestamp('verificado_at')->nullable();
+            $table->timestamps();
+
+            $table->foreign('subido_por')->references('id')->on('personas')->nullOnDelete();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('documentos_expediente');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('curriculums', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('persona_id')->unique()->constrained('personas')->cascadeOnDelete();
+            $table->string('especialidad')->nullable();
+            $table->text('experiencia')->nullable();
+            $table->string('archivo_cv')->nullable();
+            $table->text('notas_internas')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('curriculums');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void {
+        Schema::create('salones', function (Blueprint $table) {
+            $table->id('id_salon');
+            $table->string('nombre');
+            $table->integer('capacidad');
+            $table->boolean('estado')->default(true);
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void {
+        Schema::dropIfExists('salones');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void {
+        Schema::create('tipo_actividades', function (Blueprint $table) {
+            $table->id('id_tipo_actividad');
+            $table->string('nombre');
+            $table->string('descripcion')->nullable();
+            $table->time('duracion');
+            $table->boolean('estado')->default(true);
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void {
+        Schema::dropIfExists('tipo_actividades');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void {
+        Schema::create('tipo_documentos', function (Blueprint $table) {
+            $table->id('id_tipo_documento');
+            $table->string('titulo');
+            $table->string('descripcion')->nullable();
+            $table->boolean('estado')->default(true);
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void {
+        Schema::dropIfExists('tipo_documentos');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void {
+        Schema::create('temas', function (Blueprint $table) {
+            $table->id('id_tema'); // Clave primaria
+            $table->string('tema_sesion');
+            $table->string('descripcion')->nullable();
+            $table->integer('numero_de_sesion');
+            $table->date('fecha');
+            $table->time('horario_inicio');
+            $table->time('horario_fin');
+            $table->string('estado')->default('pendiente');
+            
+            // Relación con Docentes
+            $table->unsignedBigInteger('id_docente')->nullable(); 
+            $table->foreign('id_docente')->references('id')->on('docentes')->onDelete('set null');
+
+            // Columna para relacionar con Actividades (Solo columna, sin restricción foreign de momento)
+            $table->unsignedBigInteger('id_actividad')->nullable();
+
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void {
+        Schema::dropIfExists('temas');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void {
+        Schema::create('modalidades', function (Blueprint $table) {
+            $table->id('id_modalidad');
+            $table->string('nombre_modalidad');
+            $table->boolean('estado')->default(true);
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void {
+        Schema::dropIfExists('modalidades');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void {
+        Schema::create('planificaciones', function (Blueprint $table) {
+            $table->id('id_planificacion');
+            $table->string('titulo');
+            $table->integer('anio'); // <-- NUEVO: Para filtrar fácilmente por el año actual (ej. 2026)
+            $table->date('fecha_creacion');
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void {
+        Schema::dropIfExists('planificaciones');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void {
+        Schema::create('trimestres', function (Blueprint $table) {
+            $table->id('id_trimestre');
+            $table->string('nombre');
+            $table->date('fecha_inicio');
+            $table->date('fecha_fin');
+            
+            // Relación con Planificación
+            $table->unsignedBigInteger('id_planificacion');
+            $table->foreign('id_planificacion')
+                  ->references('id_planificacion')
+                  ->on('planificaciones')
+                  ->onDelete('cascade');
+            
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void {
+        Schema::dropIfExists('trimestres');
+    }
+};
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void {
+        Schema::create('actividades', function (Blueprint $table) {
+            $table->id('id_actividad');
+            
+            $table->string('nombre');
+            $table->text('descripcion')->nullable();
+            $table->date('fecha');
+            $table->date('fecha_inscripcion_inicio');
+            $table->date('fecha_inscripcion_fin');
+            $table->time('hora_inicio');
+            $table->time('hora_fin');
+            $table->string('estado')->default('pendiente');
+            
+            // Relaciones existentes en tu tabla de actividades:
+            $table->unsignedBigInteger('id_trimestre');
+            $table->unsignedBigInteger('id_salon');
+            $table->unsignedBigInteger('id_modalidad');
+            $table->unsignedBigInteger('id_tipo_actividad');
+            $table->unsignedBigInteger('id_tipo_documento');
+            
+            // Relación circular hacia temas
+            $table->unsignedBigInteger('id_tema');
+            $table->foreign('id_tema')->references('id_tema')->on('temas')->onDelete('restrict');
+
+            // NUEVO: Relación opcional con el Organizador (Persona)
+            $table->unsignedBigInteger('id_organizador')->nullable();
+            $table->foreign('id_organizador')->references('id')->on('personas')->onDelete('set null');
+
+            $table->timestamps();
+        });
+
+        // 2. AHORA QUE AMBAS EXISTEN: Alteramos la tabla 'temas' para inyectar su llave foránea
+        Schema::table('temas', function (Blueprint $table) {
+            $table->foreign('id_actividad')
+                  ->references('id_actividad')
+                  ->on('actividades')
+                  ->onDelete('cascade');
+        });
+    }
+
+    public function down(): void {
+        // Al deshacer las migraciones, quitamos primero la relación foránea para no tener errores de restricción
+        if (Schema::hasTable('temas')) {
+            Schema::table('temas', function (Blueprint $table) {
+                $table->dropForeign(['id_actividad']);
+            });
+        }
+        Schema::dropIfExists('actividades');
+    }
+};
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('sesiones', function (Blueprint $table) {
+            $table->id('id_sesion'); // O puedes dejarlo como $table->id() si lo prefieres para sesiones
+            
+            // Relación corregida especificando que apunta a 'id_actividad'
+            $table->foreignId('actividad_id')
+                  ->constrained('actividades', 'id_actividad')
+                  ->onDelete('cascade');
+                  
+            $table->integer('numero_sesion');
+            $table->string('tema');
+            $table->dateTime('start_at');
+            $table->dateTime('end_at');
+            $table->string('lugar')->nullable();
+            $table->integer('duracion_minutos');
+            $table->string('qr_token')->nullable();
+            $table->dateTime('qr_expires_at')->nullable();
+            
+            $table->timestamps();
+            $table->softDeletes(); // Requerido para el "use SoftDeletes" de tu modelo
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('sesiones');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void {
+        Schema::create('asistencias', function (Blueprint $table) {
+            $table->id('id_asistencia');
+            $table->string('estado'); // Enum o string para representar el estado (ej. "presente", "ausente")
+            $table->boolean('verificacion_qr')->default(false);
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void {
+        Schema::dropIfExists('asistencias');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void {
+        Schema::create('firmas', function (Blueprint $table) {
+            $table->id('id_firma');
+            $table->string('nombre');
+            $table->string('imagen')->nullable(); // Ruta de la imagen
+            $table->boolean('estado')->default(true);
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void {
+        Schema::dropIfExists('firmas');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void {
+        Schema::create('sellos', function (Blueprint $table) {
+            $table->id('id_sello');
+            $table->string('nombre');
+            $table->string('imagen')->nullable(); // Ruta de la imagen
+            $table->boolean('estado')->default(true);
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void {
+        Schema::dropIfExists('sellos');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('ponente_sesion', function (Blueprint $table) {
+            $table->id();
+            
+            // CORREGIDO: Ahora apunta a la tabla 'temas' usando su PK 'id_tema'
+            $table->unsignedBigInteger('tema_id');
+            $table->foreign('tema_id')->references('id_tema')->on('temas')->cascadeOnDelete();
+
+            $table->foreignId('docente_id')->nullable()->constrained('docentes')->nullOnDelete();
+            $table->foreignId('persona_id')->nullable()->constrained('personas')->nullOnDelete();
+            $table->string('rol')->nullable();
+            $table->timestamps();
+
+            // CORREGIDO: Actualizamos los índices con 'tema_id'
+            $table->index(['tema_id', 'docente_id']);
+            $table->index(['tema_id', 'persona_id']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('ponente_sesion');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('ponente_sesion', function (Blueprint $table) {
+            $table->id();
+            
+            // CORREGIDO: Ahora apunta a la tabla 'temas' usando su PK 'id_tema'
+            $table->unsignedBigInteger('tema_id');
+            $table->foreign('tema_id')->references('id_tema')->on('temas')->cascadeOnDelete();
+
+            $table->foreignId('docente_id')->nullable()->constrained('docentes')->nullOnDelete();
+            $table->foreignId('persona_id')->nullable()->constrained('personas')->nullOnDelete();
+            $table->string('rol')->nullable();
+            $table->timestamps();
+
+            // CORREGIDO: Actualizamos los índices con 'tema_id'
+            $table->index(['tema_id', 'docente_id']);
+            $table->index(['tema_id', 'persona_id']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('ponente_sesion');
+    }
+};
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void {
+        Schema::create('inscripciones', function (Blueprint $table) {
+            $table->id('id_inscripcion');
+            $table->date('fecha_registro');
+            
+            // Relaciones del negocio
+            $table->unsignedBigInteger('id_publico_general')->nullable(); // Si aplica
+            $table->unsignedBigInteger('id_estudiante')->nullable();       // Si aplica
+            $table->unsignedBigInteger('id_asistencia')->nullable();
+            $table->unsignedBigInteger('id_actividad');
+            $table->unsignedBigInteger('id_documento')->nullable();
+
+            // NUEVO: Columna estado de la inscripción
+            $table->string('estado')->default('pendiente');
+
+            $table->foreign('id_asistencia')->references('id_asistencia')->on('asistencias')->onDelete('set null');
+            $table->foreign('id_actividad')->references('id_actividad')->on('actividades')->onDelete('restrict');
+            $table->foreign('id_documento')->references('id_documento')->on('documentos')->onDelete('set null');
+            
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void {
+        Schema::dropIfExists('inscripciones');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('certificados', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('persona_id')->constrained('personas')->cascadeOnDelete();
+            $table->enum('tipo', ['estudiante_actividad', 'docente_sesion'])->nullable();
+            
+            // CORREGIDO: Relación explícita apuntando a 'id_actividad' de la tabla 'actividades'
+            $table->unsignedBigInteger('actividad_id')->nullable();
+            $table->foreign('actividad_id')->references('id_actividad')->on('actividades')->onDelete('set null');
+            
+            // CORREGIDO: Relación explícita apuntando a 'id_tema' de la nueva tabla 'temas'
+            $table->unsignedBigInteger('tema_id')->nullable();
+            $table->foreign('tema_id')->references('id_tema')->on('temas')->onDelete('set null');
+            
+            $table->uuid('codigo_verificacion')->unique();
+            $table->date('fecha_emision')->nullable();
+            $table->string('archivo')->nullable();
+            $table->string('firma_sello')->nullable(); // ruta de imagen o referencia
+            $table->string('qr_data')->nullable(); // datos embebidos en QR (json o url)
+            $table->foreignId('aprobado_por')->nullable()->constrained('personas')->nullOnDelete();
+            $table->softDeletes();
+            $table->timestamps();
+
+            // CORREGIDO: Actualizamos el índice de búsqueda con 'tema_id'
+            $table->index(['persona_id', 'actividad_id', 'tema_id']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('certificados');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('solicitudes_induccion', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('estudiante_id')->constrained('estudiantes')->cascadeOnDelete();
+            $table->foreignId('expediente_id')->nullable()->constrained('expedientes_estudiante')->nullOnDelete();
+            $table->enum('tipo', ['induccion', 'equivalencia'])->default('induccion');
+            $table->enum('estado', ['pendiente', 'aprobada', 'rechazada'])->default('pendiente');
+            $table->text('observacion')->nullable();
+            $table->timestamp('fecha_solicitud')->useCurrent();
+            $table->timestamp('fecha_respuesta')->nullable();
+            $table->unsignedTinyInteger('cartas_activas')->default(0);
+            $table->timestamps();
+
+            $table->index(['estudiante_id', 'estado']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('solicitudes_induccion');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('inducciones', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('solicitud_id')->constrained('solicitudes_induccion')->cascadeOnDelete();
+            
+            // CORREGIDO: Declaración explícita para relacionar con 'id_actividad'
+            $table->unsignedBigInteger('actividad_id');
+            $table->foreign('actividad_id')->references('id_actividad')->on('actividades')->cascadeOnDelete();
+            
+            $table->foreignId('estudiante_id')->constrained('estudiantes')->cascadeOnDelete();
+            $table->foreignId('tutor_id')->nullable()->constrained('docentes')->nullOnDelete();
+            $table->boolean('aprobada')->default(false);
+            $table->unsignedSmallInteger('horas_completadas')->nullable();
+            $table->unsignedSmallInteger('duracion_minutos')->nullable();
+            $table->timestamp('fecha_aprobacion')->nullable();
+            $table->text('observaciones')->nullable();
+            $table->timestamps();
+
+            $table->index(['actividad_id', 'estudiante_id']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('inducciones');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('tutores_asignados', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('induccion_id')->constrained('inducciones')->cascadeOnDelete();
+            $table->foreignId('docente_id')->constrained('docentes')->cascadeOnDelete();
+            $table->foreignId('estudiante_id')->constrained('estudiantes')->cascadeOnDelete();
+            $table->timestamp('fecha_asignacion')->useCurrent();
+            $table->boolean('activo')->default(true);
+            $table->text('observaciones')->nullable();
+            $table->timestamps();
+
+            $table->unique(['induccion_id', 'docente_id'], 'uniq_induccion_docente');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('tutores_asignados');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('cartas_pasantia', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('estudiante_id')->constrained('estudiantes')->cascadeOnDelete();
+            $table->string('tipo');
+            $table->string('institucion_destino')->nullable();
+            $table->date('fecha_emision')->nullable();
+            $table->string('archivo')->nullable();
+            $table->enum('estado', ['activa', 'vencida', 'anulada'])->default('activa');
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('cartas_pasantia');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('encuestas', function (Blueprint $table) {
+            $table->id();
+            
+            // CORREGIDO: Declaración explícita para relacionar con 'id_actividad'
+            $table->unsignedBigInteger('actividad_id');
+            $table->foreign('actividad_id')->references('id_actividad')->on('actividades')->cascadeOnDelete();
+            
+            $table->text('descripcion')->nullable();
+            $table->dateTime('fecha_limite')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('encuestas');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('preguntas_encuesta', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('encuesta_id')->constrained('encuestas')->cascadeOnDelete();
+            $table->text('texto');
+            $table->string('tipo'); // seleccion, texto, numerico
+            $table->json('opciones')->nullable();
+            $table->integer('orden')->default(0);
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('preguntas_encuesta');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('respuestas_encuesta', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('pregunta_id')->constrained('preguntas_encuesta')->cascadeOnDelete();
+            $table->foreignId('persona_id')->constrained('personas')->cascadeOnDelete();
+            $table->text('valor');
+            $table->timestamps();
+            $table->unique(['pregunta_id', 'persona_id']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('respuestas_encuesta');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('solicitudes_empleo', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('persona_id')->constrained('personas')->cascadeOnDelete();
+            $table->text('mensaje')->nullable();
+            $table->enum('estado', ['pendiente', 'aprobada', 'rechazada'])->default('pendiente');
+            $table->foreignId('revisado_por')->nullable()->constrained('personas')->nullOnDelete();
+            $table->timestamp('fecha_revision')->nullable();
+            $table->timestamps();
+
+            $table->index(['persona_id', 'estado']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('solicitudes_empleo');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('visitas_centro', function (Blueprint $table) {
+            $table->id();
+            $table->string('nombre_completo');
+            $table->string('cedula')->nullable();
+            $table->string('motivo_visita');
+            $table->date('fecha_visita');
+            
+            // CORREGIDO: Apuntamos de manera explícita a la tabla 'salones' y a su PK 'id_salon'
+            $table->unsignedBigInteger('id_salon')->nullable();
+            $table->foreign('id_salon')->references('id_salon')->on('salones')->onDelete('set null');
+            
+            $table->foreignId('persona_id')->nullable()->constrained('personas')->nullOnDelete();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('visitas_centro');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('jobs', function (Blueprint $table) {
+            $table->id();
+            $table->string('queue')->index();
+            $table->longText('payload');
+            $table->unsignedTinyInteger('attempts');
+            $table->unsignedInteger('reserved_at')->nullable();
+            $table->unsignedInteger('available_at');
+            $table->unsignedInteger('created_at');
+        });
+
+        Schema::create('job_batches', function (Blueprint $table) {
+            $table->string('id')->primary();
+            $table->string('name');
+            $table->integer('total_jobs');
+            $table->integer('pending_jobs');
+            $table->integer('failed_jobs');
+            $table->longText('failed_job_ids');
+            $table->mediumText('options')->nullable();
+            $table->integer('cancelled_at')->nullable();
+            $table->integer('created_at');
+            $table->integer('finished_at')->nullable();
+        });
+
+        Schema::create('failed_jobs', function (Blueprint $table) {
+            $table->id();
+            $table->string('uuid')->unique();
+            $table->text('connection');
+            $table->text('queue');
+            $table->longText('payload');
+            $table->longText('exception');
+            $table->timestamp('failed_at')->useCurrent();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('jobs');
+        Schema::dropIfExists('job_batches');
+        Schema::dropIfExists('failed_jobs');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('audit_logs', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('usuario_id')->nullable()->constrained('usuarios')->nullOnDelete();
+            $table->foreignId('persona_id')->nullable()->constrained('personas')->nullOnDelete();
+            $table->string('accion');
+            $table->string('modelo')->nullable();
+            $table->unsignedBigInteger('modelo_id')->nullable();
+            $table->json('cambios')->nullable();
+            $table->string('ip')->nullable();
+            $table->text('user_agent')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('audit_logs');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('user_approvals', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('persona_id')->constrained('personas')->cascadeOnDelete();
+            $table->enum('tipo', ['docente', 'coordinador'])->default('docente');
+            $table->enum('estado', ['pendiente', 'aprobado', 'rechazado'])->default('pendiente');
+            $table->foreignId('solicitado_por')->nullable()->constrained('personas')->nullOnDelete();
+            $table->foreignId('aprobado_por')->nullable()->constrained('personas')->nullOnDelete();
+            $table->text('motivo')->nullable();
+            $table->timestamp('fecha_solicitud')->useCurrent();
+            $table->timestamp('fecha_respuesta')->nullable();
+            $table->timestamps();
+
+            $table->index(['persona_id', 'estado']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('user_approvals');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('feriados', function (Blueprint $table) {
+            $table->id();
+            $table->date('fecha')->index();
+            $table->string('descripcion');
+            $table->boolean('recurrente')->default(false); // si se repite cada año en la misma fecha
+            $table->foreignId('creado_por')->nullable()->constrained('personas')->nullOnDelete();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('feriados');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('tipo_estudiantes', function (Blueprint $table) {
+        $table->id();
+        $table->string('nombre')->unique();
+        $table->boolean('estado')->default(true);
+        $table->timestamps();
+    });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('tipo_estudiantes');
+    }
+};

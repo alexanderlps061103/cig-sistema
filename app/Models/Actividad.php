@@ -2,78 +2,90 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Actividad extends Model
-{
-    use HasFactory;
-
+class Actividad extends Model {
     protected $table = 'actividades';
-
+    protected $primaryKey = 'id_actividad';
+    
     protected $fillable = [
-        'trimestre_id',
-        'tipo_actividad_id',
-        'nombre',
-        'descripcion',
-        'fecha_inicio_inscripcion',
-        'fecha_fin_inscripcion',
-        'fecha_actividad',
-        'duracion_total_minutos',
-        'cupos',
-        'espacio_id',
-        'estado',
-        'qr_asistencia',
-        'creado_por',
+        'nombre', 
+        'descripcion', 
+        'fecha_inscripcion_inicio', 
+        'fecha_inscripcion_fin',
+        'fecha', 
+        'hora_inicio', 
+        'hora_fin', 
+        'estado', 
+        'id_modalidad', 
+        'id_salon', 
+        'id_tipo_actividad', 
+        'id_tipo_documento', 
+        'id_tema', 
+        'id_trimestre',
+        'id_organizador'
     ];
 
     protected $casts = [
-        'fecha_inicio_inscripcion' => 'datetime',
-        'fecha_fin_inscripcion' => 'datetime',
-        'fecha_actividad' => 'date',
-        'cupos' => 'integer',
-        'duracion_total_minutos' => 'integer',
+        'fecha'                    => 'date',
+        'fecha_inscripcion_inicio' => 'date',
+        'fecha_inscripcion_fin'    => 'date',
     ];
 
-    public function trimestre(): BelongsTo
-    {
-        return $this->belongsTo(Trimestre::class);
+    public function tipo(): BelongsTo {
+        return $this->belongsTo(TipoActividad::class, 'id_tipo_actividad', 'id_tipo_actividad');
     }
 
-    public function tipoActividad(): BelongsTo
-    {
-        return $this->belongsTo(TipoActividad::class);
+    public function salon(): BelongsTo {
+        return $this->belongsTo(Salon::class, 'id_salon', 'id_salon');
     }
 
-    public function espacio(): BelongsTo
-    {
-        return $this->belongsTo(Espacio::class);
+    // NUEVO: Relación singular para cargar el tema principal en el panel del Rector
+    public function tema(): BelongsTo {
+        return $this->belongsTo(Tema::class, 'id_tema', 'id_tema');
     }
 
-    public function creadoPor(): BelongsTo
-    {
-        return $this->belongsTo(Persona::class, 'creado_por');
+    // Relación principal hacia temas (HasMany)
+    public function temas(): HasMany {
+        return $this->hasMany(Tema::class, 'id_actividad', 'id_actividad');
     }
 
-    public function sesiones(): HasMany
-    {
-        return $this->hasMany(Sesion::class);
+    // ALIAS: Para compatibilidad con el JS que busca la relación 'sesiones'
+    public function sesiones(): HasMany {
+        return $this->hasMany(Tema::class, 'id_actividad', 'id_actividad');
     }
 
-    public function inscripciones(): HasMany
-    {
-        return $this->hasMany(Inscripcion::class);
+    public function trimestre(): BelongsTo {
+        return $this->belongsTo(Trimestre::class, 'id_trimestre', 'id_trimestre');
     }
 
-    public function certificados(): HasMany
-    {
-        return $this->hasMany(Certificado::class);
+    // Relación original
+    public function modalidadRelacion(): BelongsTo {
+        return $this->belongsTo(Modalidad::class, 'id_modalidad', 'id_modalidad');
     }
 
-    public function encuestas(): HasMany
-    {
-        return $this->hasMany(Encuesta::class);
+    // ALIAS: Para evitar que se muestre "N/A" al buscar la relación directa 'modalidad'
+    public function modalidad(): BelongsTo {
+        return $this->belongsTo(Modalidad::class, 'id_modalidad', 'id_modalidad');
+    }
+
+    public function tipoDocumento(): BelongsTo {
+        return $this->belongsTo(TipoDocumento::class, 'id_tipo_documento', 'id_tipo_documento');
+    }
+
+    public function inscripciones(): HasMany {
+        return $this->hasMany(Inscripcion::class, 'id_actividad', 'id_actividad');
+    }
+
+    // Relación con el Organizador de la actividad (Persona)
+    public function organizador(): BelongsTo {
+        return $this->belongsTo(Persona::class, 'id_organizador', 'id');
+    }
+
+    // NUEVO ALIAS: Para el listado de actividades en los reportes
+    public function creador(): BelongsTo {
+        return $this->belongsTo(Persona::class, 'id_organizador', 'id');
     }
 }

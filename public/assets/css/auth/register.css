@@ -1,0 +1,170 @@
+/* ==========================================================================
+   ESTILOS PARA EL REGISTRO SIACSACIG (ADAPTADO A ESTILOBASE)
+   ========================================================================== */
+
+.auth-wrapper {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Imagen de fondo específica para Registro */
+    background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)),
+                url('/assets/images/fondo-login_dos.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    padding: 2rem; /* Convertido a rem para mantener escalabilidad */
+}
+
+.register-card {
+    background: var(--color-bg-sidebar); /* Blanco del sistema */
+    border-radius: var(--radius-lg);     /* Consistencia con esquinas del sistema (1.2rem) */
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    max-width: 95rem;                    /* Convertido a rem (950px) */
+    height: 85vh;                        /* Altura fija para activar el scroll interno */
+    max-height: 70rem;                   /* Convertido a rem (700px) */
+    overflow: hidden;
+    box-shadow: 0 2rem 4rem rgba(0, 0, 0, 0.4);
+}
+
+.register-logo-col {
+    flex: 1;
+    background: var(--color-bg-body);    /* Color gris claro del body */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem;                       /* Convertido a rem (40px) */
+    border-right: 1px solid var(--color-border); /* Borde del sistema */
+}
+
+.register-logo-img {
+    width: 100%;
+    max-width: 22rem;                    /* Convertido a rem (220px) */
+}
+
+.register-form-col {
+    flex: 1.3;
+    padding: 4rem;                       /* Convertido a rem (40px) */
+    display: flex;
+    flex-direction: column;
+    background: var(--color-bg-sidebar);
+}
+
+.register-title {
+    font-size: var(--text-lg);           /* Escala tipográfica (1.8rem / 18px) */
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: var(--space-df);      /* Espaciado por defecto (1.6rem) */
+    color: var(--color-text-main);       /* Color de texto principal */
+}
+
+/* CONTENEDOR CON SCROLL (LA RUEDITA) */
+.form-scroll-container {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: var(--space-df);      /* Espaciado por defecto (1.6rem) */
+    margin-bottom: 2rem;                 /* Convertido a rem (20px) */
+}
+
+/* Personalización de la barra de scroll */
+.form-scroll-container::-webkit-scrollbar {
+    width: 0.6rem;                       /* Convertido a rem (6px) */
+}
+.form-scroll-container::-webkit-scrollbar-thumb {
+    background: var(--color-brand-blue); /* Color principal de marca */
+    border-radius: 1rem;
+}
+.form-scroll-container::-webkit-scrollbar-track {
+    background: var(--color-bg-body);
+}
+
+/* Campos de formulario */
+.form-group-custom {
+    margin-bottom: var(--space-df);      /* Consistencia en espaciados (1.6rem) */
+}
+
+.form-label-custom {
+    display: block;
+    font-size: var(--text-sm);           /* Escalado a 1.3rem (antes 0.85rem era muy pequeño) */
+    font-weight: 700;
+    color: var(--color-text-muted);      /* Texto gris del sistema */
+    margin-bottom: var(--space-xs);      /* Espacio pequeño (0.4rem) */
+    margin-left: var(--space-xs);
+}
+
+.form-input-custom {
+    width: 100%;
+    padding: 1.2rem 2rem;                /* Convertido a rem */
+    border: 1px solid var(--color-border);
+    border-radius: 5rem;                 /* Mantiene el diseño redondo (píldora) */
+    background: var(--color-bg-body);    /* Color de fondo sutil */
+    font-size: var(--text-base);         /* Escalado a 1.4rem para legibilidad (antes era 0.95rem) */
+    color: var(--color-text-main);
+    transition: var(--transition-speed); /* Transición global */
+}
+
+.form-input-custom:focus {
+    background: var(--color-bg-sidebar); /* Cambia a blanco puro al enfocar */
+    border-color: var(--color-brand-blue);
+    outline: none;
+    box-shadow: 0 0 0 0.4rem rgba(35, 55, 140, 0.1); /* Efecto glow usando el color de marca */
+}
+
+.form-row {
+    display: flex;
+    gap: var(--space-df);                /* Espaciado estándar entre columnas (1.6rem) */
+    margin-bottom: var(--space-df);
+}
+
+.form-row > div {
+    flex: 1;
+}
+
+/* Botones */
+.btn-submit-custom {
+    width: 100%;
+    padding: 1.4rem;                     /* Convertido a rem (14px) */
+    background: var(--color-brand-blue); /* Color principal de marca */
+    color: white;
+    border: none;
+    border-radius: 5rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: var(--transition-speed);
+    font-size: var(--text-base);         /* Consistente con el tamaño de botones del sistema (1.4rem) */
+}
+
+.btn-submit-custom:hover {
+    background: #1a2a6c;                 /* Azul sutilmente más oscuro para contraste */
+    transform: translateY(-0.2rem);      /* Efecto hover suave escalable */
+}
+
+.login-link {
+    display: block;
+    text-align: center;
+    margin-top: var(--space-df);
+    color: var(--color-brand-blue);
+    text-decoration: none;
+    font-weight: 700;
+    font-size: var(--text-sm);           /* Escalado a 1.3rem (antes era 0.9rem) */
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .register-card { 
+        flex-direction: column; 
+        height: auto; 
+        max-height: none; 
+    }
+    .register-logo-col { 
+        display: none; 
+    }
+    .form-row { 
+        flex-direction: column; 
+        gap: 0; 
+    }
+}

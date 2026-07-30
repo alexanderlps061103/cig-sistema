@@ -13,7 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Registro de alias para tus middlewares
         $middleware->alias([
-            'check.role'    => \App\Http\Middleware\CheckRole::class,
+            'role' => \App\Http\Middleware\EnsureRole::class,
             'check.aprobado'=> \App\Http\Middleware\CheckAprobado::class,
         ]);
 

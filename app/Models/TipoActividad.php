@@ -2,20 +2,20 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class TipoActividad extends Model
-{
-    use HasFactory;
+class TipoActividad extends Model {
+    protected $table = 'tipo_actividades';
+    protected $primaryKey = 'id_tipo_actividad';
+    
+    protected $fillable = [
+        'nombre', 
+        'descripcion', 
+        'duracion', 
+        'estado'
+    ];
 
-    protected $table = 'tipos_actividad';
-
-    protected $fillable = ['nombre', 'descripcion'];
-
-    public function actividades(): HasMany
-    {
-        return $this->hasMany(Actividad::class);
-    }
+    protected $casts = [
+        'estado' => 'boolean',
+    ];
 }

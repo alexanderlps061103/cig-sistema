@@ -1,0 +1,3343 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Actividad;
+use Illuminate\Http\Request;
+
+class ActividadController extends Controller
+{
+    /**
+     * Almacenar una nueva actividad sin exigir los campos retirados
+     */
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'nombre'                   => 'required|string|max:255',
+            'descripcion'              => 'nullable|string',
+            'fecha_inscripcion_inicio' => 'required|date',
+            'fecha_inscripcion_fin'    => 'required|date|before_or_equal:fecha',
+            'fecha'                    => 'required|date',
+            'hora_inicio'              => 'required',
+            'hora_fin'                 => 'required|after:hora_inicio',
+            'estado'                   => 'required|string|in:pendiente,activa,culminada',
+            'id_modalidad'             => 'required|exists:modalidades,id_modalidad',
+            'id_salon'                 => 'required|exists:salones,id_salon',
+            'id_tipo_actividad'        => 'required|exists:tipo_actividades,id_tipo_actividad',
+            'id_trimestre'             => 'required|exists:trimestres,id_trimestre',
+            'id_organizador'           => 'nullable|exists:personas,id' // <-- Validar organizador opcional
+        ], [
+            'fecha_inscripcion_fin.before_or_equal' => 'El fin de la inscripción no puede superar el día de la actividad.',
+            'hora_fin.after' => 'La hora de finalización debe ser posterior a la hora de inicio.'
+        ]);
+
+        // Fallbacks para campos requeridos por base de datos
+        $data['id_tipo_documento'] = 1; 
+        $data['id_tema'] = 1;           
+
+        Actividad::create($data);
+        return redirect()->back()->with('success', 'Actividad registrada de forma exitosa.');
+    }
+
+    /**
+     * Actualizar una actividad existente
+     */
+    public function update(Request $request, $id)
+    {
+        $data = $request->validate([
+            'nombre'                   => 'required|string|max:255',
+            'descripcion'              => 'nullable|string',
+            'fecha_inscripcion_inicio' => 'required|date',
+            'fecha_inscripcion_fin'    => 'required|date|before_or_equal:fecha',
+            'fecha'                    => 'required|date',
+            'hora_inicio'              => 'required',
+            'hora_fin'                 => 'required|after:hora_inicio',
+            'estado'                   => 'required|string|in:pendiente,activa,culminada',
+            'id_modalidad'             => 'required|exists:modalidades,id_modalidad',
+            'id_salon'                 => 'required|exists:salones,id_salon',
+            'id_tipo_actividad'        => 'required|exists:tipo_actividades,id_tipo_actividad',
+            'id_trimestre'             => 'required|exists:trimestres,id_trimestre',
+            'id_organizador'           => 'nullable|exists:personas,id' // <-- Validar organizador opcional
+        ], [
+            'fecha_inscripcion_fin.before_or_equal' => 'El fin de la inscripción no puede superar el día de la actividad.',
+            'hora_fin.after' => 'La hora de finalización debe ser posterior a la hora de inicio.'
+        ]);
+
+        $actividad = Actividad::findOrFail($id);
+        $actividad->update($data);
+
+        return redirect()->back()->with('success', 'Actividad actualizada de forma exitosa.');
+    }
+
+    /**
+     * Eliminar el registro del sistema
+     */
+    public function destroy($id)
+    {
+        $actividad = Actividad::findOrFail($id);
+        $actividad->delete();
+        return redirect()->back()->with('success', 'Actividad eliminada de forma exitosa.');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Asistencia;
+use Illuminate\Http\Request;
+
+class AsistenciaController extends Controller
+{
+    public function registrarAsistencia(Request $request)
+    {
+        $data = $request->validate([
+            'estado' => 'required|string',
+            'verificacion_qr' => 'required|boolean'
+        ]);
+
+        $asistencia = Asistencia::create($data);
+        return response()->json(['success' => true, 'data' => $asistencia]);
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Certificado;
+use App\Models\Actividad;
+use App\Models\Asistencia;
+use App\Models\Persona;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use PDF;
+use Illuminate\Support\Str;
+
+class CertificadoController extends Controller
+{
+    public function __construct()
+    {
+        $this->middleware('auth')->only(['misCertificados','descargar']);
+    }
+
+    // Generar certificados para una actividad (coordinador)
+    public function generarParaActividad(Actividad $actividad)
+    {
+        // puedes delegar a Job GenerateCertificatesForActivity
+        // aquí un flujo simple (ver reglas arriba)
+        $asistencias = Asistencia::whereIn('sesion_id', $actividad->sesiones->pluck('id'))->get();
+        $personas = $asistencias->groupBy('persona_id');
+
+        foreach ($personas as $personaId => $list) {
+            $persona = Persona::find($personaId);
+            $cert = Certificado::create([
+                'persona_id' => $persona->id,
+                'tipo' => 'participante',
+                'actividad_id' => $actividad->id,
+                'codigo_verificacion' => Str::upper(Str::random(10)),
+                'fecha_emision' => now(),
+            ]);
+
+            // generar pdf
+            $pdf = PDF::loadView('certificados.plantilla', compact('cert','actividad','persona'))->setPaper('a4','landscape');
+            $path = "certificados/{$actividad->id}/cert_{$cert->id}.pdf";
+            Storage::disk('public')->put($path, $pdf->output());
+            $cert->archivo = "storage/{$path}";
+            $cert->save();
+
+            // enqueue Mail send job (opcional)
+            // dispatch(new \App\Jobs\SendCertificadoJob($cert));
+        }
+
+        return back()->with('success','Certificados generados.');
+    }
+
+    public function descargar(Certificado $cert)
+    {
+        $path = str_replace('storage/','',$cert->archivo);
+        if (! $path || ! Storage::disk('public')->exists($path)) abort(404);
+        return response()->download(storage_path("app/public/{$path}"));
+    }
+
+    // Mis certificados para usuario autenticado (estudiante/ponente)
+    public function misCertificados()
+    {
+        $persona = auth()->user()->persona;
+        $certificados = Certificado::where('persona_id',$persona->id)->latest()->paginate(20);
+        return view('certificados.mis', compact('certificados'));
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\{Espacio, Trimestre, Feriado, Modalidad, TipoActividad, Actividad};
+use Illuminate\Support\Facades\DB;
+
+class ConfiguracionController extends Controller
+{
+    // ==========================================
+    // 1. PERIODOS (TRIMESTRES)
+    // ==========================================
+    
+    /**
+     * CORREGIDO: Ahora ordena por ID de forma ascendente (1 arriba, luego 2 abajo...)
+     */
+    public function periodosIndex() {
+        $periodos = Trimestre::orderBy('id', 'asc')->paginate(10);
+        return view('coordinador.planificacion.periodos', compact('periodos'));
+    }
+
+    /**
+     * CORREGIDO: Se valida 'estado' y se mapea de 'active'/'inactive' a boolean para la columna 'estado'
+     */
+    public function periodosStore(Request $request) {
+        $data = $request->validate([
+            'nombre' => 'required|string',
+            'fecha_inicio' => 'required|date',
+            'fecha_fin' => 'required|date|after:fecha_inicio',
+            'estado' => 'required|in:active,inactive',
+        ]);
+
+        Trimestre::create([
+            'nombre'       => $data['nombre'],
+            'fecha_inicio' => $data['fecha_inicio'],
+            'fecha_fin'    => $data['fecha_fin'],
+            'estado'       => $data['estado'] === 'active', // Guarda true (1) o false (0)
+            'creado_por'   => auth()->user()->persona_id,
+        ]);
+
+        return back()->with('success', 'Periodo creado correctamente.');
+    }
+
+    /**
+     * CORREGIDO: Se procesa la actualización traduciendo 'active'/'inactive' a boolean en la columna 'estado'
+     */
+    public function periodosUpdate(Request $request, $id) {
+        $data = $request->validate([
+            'nombre' => 'required|string',
+            'fecha_inicio' => 'required|date',
+            'fecha_fin' => 'required|date|after:fecha_inicio',
+            'estado' => 'required|in:active,inactive',
+        ]);
+
+        $periodo = Trimestre::findOrFail($id);
+        
+        $periodo->update([
+            'nombre'       => $data['nombre'],
+            'fecha_inicio' => $data['fecha_inicio'],
+            'fecha_fin'    => $data['fecha_fin'],
+            'estado'       => $data['estado'] === 'active',
+        ]);
+
+        return back()->with('success', 'Periodo actualizado.');
+    }
+
+    /**
+     * CORREGIDO: Se cambia el campo de actualización de 'activo' a 'estado' para que coincida con la BD
+     */
+    public function periodosToggle($id) {
+        $periodo = Trimestre::findOrFail($id);
+        
+        // El campo real de la base de datos es 'estado'
+        $periodo->update([
+            'estado' => !$periodo->estado
+        ]);
+
+        return back()->with('success', 'Estado del periodo actualizado.');
+    }
+
+    // ==========================================
+    // 2. MODALIDADES
+    // ==========================================
+    public function modalidadesIndex() {
+        $modalidades = Modalidad::all();
+        return view('coordinador.estructura.modalidades', compact('modalidades'));
+    }
+
+    public function modalidadesStore(Request $request) {
+        Modalidad::create($request->validate(['nombre' => 'required', 'descripcion' => 'nullable']));
+        return back()->with('success', 'Modalidad registrada.');
+    }
+
+    public function modalidadesUpdate(Request $request, $id) {
+        $modalidad = Modalidad::findOrFail($id);
+        $modalidad->update($request->all());
+        return back()->with('success', 'Modalidad actualizada.');
+    }
+
+    // ==========================================
+    // 3. TIPOS DE ACTIVIDAD
+    // ==========================================
+    public function tiposIndex() {
+        $tipos = TipoActividad::all();
+        return view('coordinador.estructura.tipos', compact('tipos'));
+    }
+
+    public function tiposStore(Request $request) {
+        TipoActividad::create($request->validate(['nombre' => 'required', 'descripcion' => 'nullable']));
+        return back()->with('success', 'Tipo de actividad creado.');
+    }
+
+    public function tiposUpdate(Request $request, $id) {
+        $tipo = TipoActividad::findOrFail($id);
+        $tipo->update($request->all());
+        return back()->with('success', 'Tipo actualizado.');
+    }
+
+    public function tiposDestroy($id) {
+        $tipo = TipoActividad::findOrFail($id);
+        if($tipo->actividades()->exists()) {
+            return back()->with('error', 'No se puede eliminar: tiene actividades registradas.');
+        }
+        $tipo->delete();
+        return back()->with('info', 'Tipo de actividad eliminado.');
+    }
+
+    // ==========================================
+    // 4. FERIADOS
+    // ==========================================
+    public function feriadosIndex() {
+        $trimestres = Trimestre::orderBy('fecha_inicio', 'desc')->get();
+        $feriados = Feriado::orderBy('fecha', 'asc')->get();
+        return view('coordinador.planificacion.feriados', compact('feriados', 'trimestres'));
+    }
+
+    public function feriadosStore(Request $request) {
+        $request->validate(['fecha' => 'required|date', 'descripcion' => 'required']);
+        Feriado::create($request->all() + [
+            'creado_por' => auth()->user()->persona_id,
+            'recurrente' => $request->has('recurrente')
+        ]);
+        return back()->with('success', 'Día no laboral registrado.');
+    }
+
+    public function feriadosDestroy($id) {
+        Feriado::findOrFail($id)->delete();
+        return back()->with('info', 'Feriado eliminado.');
+    }
+
+    // ==========================================
+    // 5. AULAS (ESPACIOS)
+    // ==========================================
+    public function espaciosIndex(Request $request) {
+        $espacios = Espacio::all()->map(function($espacio) {
+            $ocupado = Actividad::where('espacio_id', $espacio->id)
+                                ->whereDate('fecha_actividad', now()->format('Y-m-d'))
+                                ->exists();
+            $espacio->en_uso = $ocupado;
+            return $espacio;
+        });
+
+        return view('coordinador.planificacion.aulas', compact('espacios'));
+    }
+
+    public function espaciosStore(Request $request) {
+        $data = $request->validate([
+            'nombre' => 'required',
+            'capacidad' => 'required|integer',
+            'ubicacion' => 'nullable'
+        ]);
+        // NOTA DE ATENCIÓN: Si tu tabla 'espacios' también usa la columna 'estado' 
+        // en lugar de 'activo' en su migración, deberías cambiar 'activo' por 'estado' aquí.
+        Espacio::create($data + ['activo' => true]);
+        return back()->with('success', 'Aula registrada.');
+    }
+
+    public function espaciosUpdate(Request $request, $id) {
+        $espacio = Espacio::findOrFail($id);
+        $espacio->update($request->all());
+        return back()->with('success', 'Datos del aula actualizados.');
+    }
+
+    public function espaciosToggle($id) {
+        $espacio = Espacio::findOrFail($id);
+        // NOTA DE ATENCIÓN: Al igual que con los periodos, si en la migración de espacios la columna 
+        // es 'estado', debes cambiar 'activo' por 'estado' en esta línea.
+        $espacio->update(['activo' => !$espacio->activo]);
+        return back()->with('info', 'Estado del aula actualizado.');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Foundation\Bus\DispatchesJobs;
+use Illuminate\Foundation\Validation\ValidatesRequests;
+use Illuminate\Routing\Controller as BaseController;
+
+class Controller extends BaseController
+{
+    use AuthorizesRequests, DispatchesJobs, ValidatesRequests;
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\{Actividad, Sesion, Salon, Inscripcion, SolicitudInduccion, Certificado, Estudiante, Persona, Feriado};
+use App\Models\Planificacion;
+use App\Models\Trimestre;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+
+class CoordinadorController extends Controller
+{
+    /**
+     * Dashboard Principal del Coordinador
+     */
+    public function dashboard()
+    {
+        $counts = [
+            'actividades' => Actividad::count(),
+            'sesiones' => \App\Models\Tema::count(), 
+            'espacios' => Salon::where('estado', true)->count(),
+            'inscripciones_pendientes' => Inscripcion::where('estado', 'pendiente')->count(),
+        ];
+
+        $now = Carbon::now();
+        $anioActual = $now->year;
+
+        // Eager loading de la jerarquía completa
+        $planificacion = Planificacion::with(['trimestres.actividades.salon', 'trimestres.actividades.tipo', 'trimestres.actividades.temas.docente.persona'])
+            ->where('anio', $anioActual)
+            ->first();
+
+        $trimestres = $planificacion ? $planificacion->trimestres : collect();
+
+        // Mapear Actividades y Feriados para el Calendario
+        $actividadesMapped = [];
+
+        foreach ($trimestres as $trimestre) {
+            foreach ($trimestre->actividades as $actividad) {
+                $sesionesConteo = $actividad->temas->count();
+
+                $actividadesMapped[] = [
+                    'id'                   => $actividad->id_actividad,
+                    'type'                 => 'actividad',
+                    'nombre'               => $actividad->nombre,
+                    'planificacion_nombre' => $planificacion->titulo,
+                    'anio'                 => $planificacion->anio,
+                    'trimestre_nombre'     => $trimestre->nombre,
+                    'modalidad'            => $actividad->modalidadRelacion->nombre_modalidad ?? 'Presencial', 
+                    'tipo'                 => $actividad->tipo->nombre ?? 'N/A',
+                    'aula'                 => $actividad->salon->nombre ?? 'N/A',
+                    'fecha'                => $actividad->fecha ? $actividad->fecha->format('Y-m-d') : null,
+                    'horario'              => Carbon::parse($actividad->hora_inicio)->format('g:i A') . ' a ' . Carbon::parse($actividad->hora_fin)->format('g:i A'),
+                    'sesiones_conteo'      => $sesionesConteo,
+                    'temas'                => $actividad->temas->map(function($t) {
+                        return [
+                            'tema_sesion' => $t->tema_sesion,
+                            'docente_nombre' => ($t->docente->persona->nombres ?? 'No') . ' ' . ($t->docente->persona->apellidos ?? 'Asignado'),
+                            'hora_inicio' => Carbon::parse($t->horario_inicio)->format('g:i A'),
+                            'hora_fin' => Carbon::parse($t->horario_fin)->format('g:i A'),
+                        ];
+                    })
+                ];
+            }
+        }
+
+        // Agregar Feriados de la Base de Datos
+        $feriados = Feriado::all();
+        foreach ($feriados as $feriado) {
+            $fechaFeriado = $feriado->fecha instanceof Carbon ? $feriado->fecha : Carbon::parse($feriado->fecha);
+            $actividadesMapped[] = [
+                'id'          => $feriado->id_feriado ?? $feriado->id,
+                'type'        => 'feriado',
+                'nombre'      => 'Feriado: ' . ($feriado->nombre ?? $feriado->descripcion),
+                'fecha'       => $fechaFeriado->format('Y-m-d'),
+                'descripcion' => $feriado->descripcion ?? 'Día festivo nacional.',
+            ];
+        }
+
+        // Obtener listas auxiliares
+        $salones = Salon::where('estado', true)->get();
+        
+        $modalidades = DB::table('modalidades')
+            ->select('id_modalidad', 'nombre_modalidad as nombre', 'estado')
+            ->get();
+
+        $tipoActividades = DB::table('tipo_actividades')->get();
+        $tipoDocumentos = DB::table('tipo_documentos')->get();
+        $temas = DB::table('temas')->get();
+
+        // Obtener docentes con Eager Loading asegurando que tengan una persona asociada para evitar excepciones
+        $docentes = \App\Models\Docente::with('persona')
+            ->whereHas('persona')
+            ->get();
+
+        return view('coordinador.dashboardCoordinador', compact(
+            'counts', 
+            'trimestres', 
+            'actividadesMapped', 
+            'salones', 
+            'modalidades', 
+            'tipoActividades', 
+            'tipoDocumentos', 
+            'temas',
+            'docentes'
+        ));
+    }
+
+    /**
+     * Apartado: El Coordinador actúa como Docente/Ponente
+     */
+    public function misSesiones()
+    {
+        $personaId = auth()->user()->persona_id;
+        $sesiones = Sesion::whereHas('ponentes', function($q) use ($personaId) {
+            $q->where('persona_id', $personaId);
+        })->with('actividad')->get();
+
+        return view('coordinador.personal.sesiones', compact('sesiones'));
+    }
+
+    /**
+     * Apartado: Certificados que el Coordinador ha recibido
+     */
+    public function misCertificados()
+    {
+        $certificados = Certificado::where('persona_id', auth()->user()->persona_id)
+            ->with(['actividad', 'sesion'])
+            ->latest()
+            ->get();
+
+        return view('coordinador.personal.certificados', compact('certificados'));
+    }
+
+    /**
+     * Apartado: Tutorías de pasantías asignadas al Coordinador
+     */
+    public function misTutorias()
+    {
+        $docente = auth()->user()->persona->docentes;
+
+        if (!$docente) {
+            return back()->with('error', 'No tienes un perfil de docente activo para ver tutorías.');
+        }
+
+        $tutorias = \App\Models\TutorAsignado::where('docente_id', $docente->id)
+            ->with(['estudiante.persona', 'induccion'])
+            ->get();
+
+        return view('coordinador.personal.tutorias', compact('tutorias'));
+    }
+
+    /**
+     * Muestra el listado de actividades y los participantes inscritos de cada una.
+     */
+    public function listarActividadesConInscritos()
+    {
+        // Cargamos todas las actividades junto con su tipo, salón, modalidad 
+        // y los inscritos asociados (con perfiles de estudiante y personas).
+        $actividades = Actividad::with([
+            'tipo',
+            'salon',
+            'modalidadRelacion',
+            'inscripciones.estudiante.persona',
+            'inscripciones.publicoGeneral'
+        ])->orderBy('fecha', 'desc')->get();
+
+        // CORREGIDO: Ahora retorna correctamente la vista 'ListadoInscripcion'
+        return view('coordinador.ListadoInscripcion', compact('actividades'));
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\{Persona, Estudiante, SolicitudInduccion, UserApproval, Role};
+use Illuminate\Support\Facades\DB;
+
+class CoordinadorUsuarioController extends Controller
+{
+    public function solicitudesRol() {
+        // Solicitudes pendientes de Público a Estudiante
+        $solicitudes = UserApproval::where('tipo', 'cambio_estudiante')->where('estado', 'pendiente')->get();
+        return view('coordinador.usuarios.solicitudes', compact('solicitudes'));
+    }
+
+    public function convertirAEstudiante(Request $request, $id) {
+        $solicitud = UserApproval::findOrFail($id);
+
+        DB::transaction(function () use ($solicitud, $request) {
+            $persona = $solicitud->persona;
+
+            // Cambiar rol en la tabla pivote
+            $persona->roles()->updateExistingPivot(5, ['activo' => false]); // Desactivar Público
+            $persona->roles()->attach(4, ['activo' => true, 'asignado_por' => auth()->user()->persona_id]); // Activar Estudiante
+
+            // Crear el registro oficial de estudiante
+            Estudiante::create([
+                'persona_id' => $persona->id,
+                'carrera_id' => $request->carrera_id,
+                'es_regular' => true
+            ]);
+
+            $solicitud->update(['estado' => 'aprobado', 'fecha_respuesta' => now()]);
+        });
+
+        return back()->with('success', 'Usuario convertido en Estudiante exitosamente.');
+    }
+
+    public function procesarInduccion(Request $request, $id) {
+        $sol = SolicitudInduccion::findOrFail($id);
+
+        // Regla: Solo Ciencias Alimentarias
+        if ($sol->estudiante->carrera->nombre != 'Ciencias y Culturas Alimentarias') {
+            return back()->with('error', 'Esta carrera no posee inducción en este módulo.');
+        }
+
+        $sol->update([
+            'estado' => $request->estado, // aprobada / rechazada
+            'observacion' => $request->observacion,
+            'fecha_respuesta' => now()
+        ]);
+
+        return back()->with('success', 'Solicitud de inducción procesada.');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Traits\RedirectsByRole;
+use Illuminate\Http\Request;
+use App\Models\Planificacion;
+use App\Models\Trimestre;
+use App\Models\Actividad;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+class DashboardController extends Controller
+{
+    use RedirectsByRole;
+
+    public function index()
+    {
+        return redirect($this->redirectToDashboardByRole(auth()->user()));
+    }
+
+    public function coordinadorDashboard()
+    {
+        $now = Carbon::now();
+        $anioActual = $now->year;
+
+        // 1. Obtener planificación, trimestres, actividades y relaciones de temas/docentes
+        $planificacion = Planificacion::with([
+            'trimestres.actividades.salon', 
+            'trimestres.actividades.tipo',
+            'trimestres.actividades.temas.docente.persona' // Trae las sesiones, el docente y sus datos personales
+        ])
+        ->where('anio', $anioActual)
+        ->first();
+
+        $trimestres = $planificacion ? $planificacion->trimestres : collect();
+
+        // 2. Unificar Actividades y Feriados para el Calendario
+        $actividadesMapped = [];
+
+        // A. Cargar Actividades con sus Temas/Sesiones correspondientes
+        foreach ($trimestres as $trimestre) {
+            foreach ($trimestre->actividades as $actividad) {
+                
+                // Mapeamos los temas asociados a esta actividad con adaptaciones de compatibilidad
+                $sesionesMapped = $actividad->temas->map(function ($tema) {
+                    
+                    // Fallback de seguridad: si el docente no está precargado por Eloquent, lo buscamos de manera directa
+                    $docente = $tema->docente ?? \App\Models\Docente::with('persona')->find($tema->id_docente);
+                    $nombreDocente = ($docente && $docente->persona)
+                        ? $docente->persona->nombres . ' ' . $docente->persona->apellidos
+                        : 'Sin Docente Asignado';
+
+                    // Combinar fecha y hora para evitar que los formateadores del Frontend arrojen "N/A"
+                    $fechaStr = ($tema->fecha instanceof Carbon) ? $tema->fecha->format('Y-m-d') : $tema->fecha;
+                    $startAtCombined = ($fechaStr && $tema->horario_inicio) ? "{$fechaStr} {$tema->horario_inicio}" : $tema->horario_inicio;
+                    $endAtCombined = ($fechaStr && $tema->horario_fin) ? "{$fechaStr} {$tema->horario_fin}" : $tema->horario_fin;
+
+                    return [
+                        'id'                => $tema->id_tema,
+                        'id_tema'           => $tema->id_tema,
+                        'idTema'            => $tema->id_tema,
+                        
+                        // Tema / Título
+                        'tema_sesion'       => $tema->tema_sesion,
+                        'temaSesion'        => $tema->tema_sesion,
+                        'tema'              => $tema->tema_sesion,
+                        'nombre'            => $tema->tema_sesion,
+                        'title'             => $tema->tema_sesion,
+                        
+                        // Descripción
+                        'descripcion'       => $tema->descripcion,
+                        'description'       => $tema->descripcion,
+                        
+                        // Número de sesión
+                        'numero_de_sesion'  => $tema->numero_de_sesion,
+                        'numeroDeSesion'    => $tema->numero_de_sesion,
+                        'numero_sesion'     => $tema->numero_de_sesion,
+                        'numeroSesion'      => $tema->numero_de_sesion,
+                        'numero'            => $tema->numero_de_sesion,
+                        
+                        // Horarios y fechas combinados (Compatibilidad con formateadores de fecha en JS)
+                        'horario_inicio'    => $tema->horario_inicio,
+                        'horarioInicio'     => $tema->horario_inicio,
+                        'horario_fin'       => $tema->horario_fin,
+                        'horarioFin'        => $tema->horario_fin,
+                        
+                        'hora_inicio'       => $tema->horario_inicio,
+                        'horaInicio'        => $tema->horario_inicio,
+                        'hora_fin'          => $tema->horario_fin,
+                        'horaFin'           => $tema->horario_fin,
+                        
+                        'start_at'          => $startAtCombined,
+                        'startAt'           => $startAtCombined,
+                        'end_at'            => $endAtCombined,
+                        'endAt'             => $endAtCombined,
+                        
+                        // Estado
+                        'estado'            => $tema->estado,
+                        'status'            => $tema->estado,
+                        
+                        // Docente
+                        'id_docente'        => $tema->id_docente,
+                        'idDocente'         => $tema->id_docente,
+                        'docente'           => $nombreDocente,
+                        'nombre_docente'    => $nombreDocente,
+                        'nombreDocente'     => $nombreDocente,
+                        'teacher'           => $nombreDocente,
+                    ];
+                })->toArray();
+
+                $actividadesMapped[] = [
+                    'id'                   => $actividad->id_actividad,
+                    'type'                 => 'actividad',
+                    'nombre'               => $actividad->nombre,
+                    'descripcion'          => $actividad->descripcion,
+                    'planificacion_nombre' => $planificacion->titulo,
+                    'anio'                 => $planificacion->anio,
+                    'trimestre_nombre'     => $trimestre->nombre,
+                    'id_trimestre'         => $actividad->id_trimestre,
+                    'id_salon'             => $actividad->id_salon,
+                    'id_modalidad'         => $actividad->id_modalidad,
+                    'id_tipo_actividad'    => $actividad->id_tipo_actividad,
+                    'id_organizador'       => $actividad->id_organizador,
+                    'modalidad'            => $actividad->modalidad ?? 'N/A', 
+                    'tipo'                 => $actividad->tipo->nombre ?? 'N/A',
+                    'aula'                 => $actividad->salon->nombre ?? 'N/A',
+                    'fecha'                => Carbon::parse($actividad->fecha)->format('Y-m-d'),
+                    'hora_inicio'          => $actividad->hora_inicio,
+                    'hora_fin'             => $actividad->hora_fin,
+                    'horario'              => $actividad->horario ?? ($actividad->hora_inicio . ' a ' . $actividad->hora_fin),
+                    'estado'               => $actividad->estado,
+                    'sesiones_conteo'      => $actividad->temas->count(),
+                    'sesiones'             => $sesionesMapped, // Pasado al frontend
+                    'temas'                => $sesionesMapped,  // Alias alternativo
+                ];
+            }
+        }
+
+        // B. Cargar Feriados de la Base de Datos
+        if (Schema::hasTable('feriados')) {
+            $feriados = DB::table('feriados')->get();
+            foreach ($feriados as $feriado) {
+                $actividadesMapped[] = [
+                    'id'          => $feriado->id_feriado ?? $feriado->id,
+                    'type'        => 'feriado',
+                    'nombre'      => 'Feriado: ' . ($feriado->nombre ?? $feriado->descripcion),
+                    'fecha'       => Carbon::parse($feriado->fecha)->format('Y-m-d'),
+                    'descripcion' => $feriado->descripcion ?? 'Día no laborable.',
+                ];
+            }
+        }
+
+        // 3. Obtener variables auxiliares necesarias para rellenar los selects de los modales
+        $docentes = \App\Models\Docente::with('persona')->get();
+        $salones = DB::table('salones')->where('estado', true)->get();
+        $modalidades = DB::table('modalidades')->where('estado', true)->get();
+        $tipoActividades = DB::table('tipo_actividades')->where('estado', true)->get();
+        $tipoDocumentos = DB::table('tipo_documentos')->where('estado', true)->get();
+        $temas = DB::table('temas')->get();
+
+        // 4. KPIs rápidos (Nota: para sesiones contamos registros en 'temas' ya que allí guardas el contenido)
+        $counts = [
+            'actividades'              => Actividad::count(),
+            'sesiones'                 => DB::table('temas')->count() ?? 0,
+            'espacios'                 => DB::table('salones')->count() ?? 0,
+            'inscripciones_pendientes' => DB::table('inscripciones')->where('estado', 'pendiente')->count() ?? 0,
+        ];
+
+        return view('coordinador.dashboard', compact(
+            'trimestres', 
+            'actividadesMapped', 
+            'counts', 
+            'docentes', 
+            'salones', 
+            'modalidades', 
+            'tipoActividades', 
+            'tipoDocumentos', 
+            'temas'
+        ));
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Tema;
+use App\Models\Asistencia;
+use App\Models\Actividad;
+use App\Models\Docente;
+use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\AsistenciasExport;
+
+class DocenteController extends Controller
+{
+    public function __construct()
+    {
+        $this->middleware(['auth','role:docente']);
+    }
+
+    public function index()
+    {
+        $personaId = auth()->user()->persona_id ?? auth()->user()->persona->id;
+
+        // Buscamos el perfil docente de la persona logueada
+        $docente = Docente::where('persona_id', $personaId)->first();
+
+        // Buscamos directamente las actividades asociadas a los temas de este docente
+        $sesiones = $docente 
+            ? Actividad::whereHas('tema', function($query) use ($docente) {
+                  $query->where('id_docente', $docente->id);
+              })->with(['tema', 'salon'])->get() 
+            : collect();
+
+        return view('docente.dashboardDocente', compact('sesiones'));
+    }
+
+    // Exportar lista de inscritos/Asistencias en Excel (dinámico)
+    public function exportInscritos(Actividad $actividad)
+    {
+        return Excel::download(new \App\Exports\InscritosExport($actividad->id_actividad), "inscritos_actividad_{$actividad->id_actividad}.xlsx");
+    }
+
+    // Ver listado en tabla con búsqueda/paginación (AJAX support)
+    public function inscritosTable(Actividad $actividad, Request $request)
+    {
+        $query = $actividad->inscripciones()->with('persona');
+
+        if ($q = $request->input('q')) {
+            $query->whereHas('persona', fn($qq)=> $qq->where('nombres','like',"%{$q}%")->orWhere('apellidos','like',"%{$q}%"));
+        }
+
+        if ($order = $request->input('order')) {
+            if ($order === 'alfabetico') {
+                $query->join('personas','inscripciones.persona_id','=','personas.id')->orderBy('personas.nombres');
+            } else {
+                $query->orderBy('fecha_inscripcion','desc');
+            }
+        }
+
+        $inscripciones = $query->paginate(50);
+        return response()->json($inscripciones);
+    }
+
+    // Permitir al docente tomar asistencia manualmente (ajustado a Tema e id_tema)
+    public function tomarAsistenciaManual(Request $request, Tema $tema)
+    {
+        $data = $request->validate([
+            'persona_id' => 'required|exists:personas,id',
+            'metodo' => 'nullable|string'
+        ]);
+
+        $existe = Asistencia::where('id_tema', $tema->id_tema)->where('persona_id', $data['persona_id'])->first();
+        if ($existe) {
+            return back()->with('info','Asistencia ya registrada.');
+        }
+
+        Asistencia::create([
+            'id_tema' => $tema->id_tema,
+            'persona_id' => $data['persona_id'],
+            'fecha_hora' => now(),
+            'metodo' => $data['metodo'] ?? 'manual',
+            'registrado_por' => auth()->user()->persona_id ?? auth()->user()->persona->id,
+        ]);
+
+        return back()->with('success','Asistencia registrada.');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Documento;
+use App\Models\Inscripcion;
+use Illuminate\Http\Request;
+
+class DocumentosController extends Controller
+{
+    // Estructuración y respuesta en formato HTML/Plantilla para renderizados del sistema
+    public function generarDocumento($id_inscripcion)
+    {
+        $inscripcion = Inscripcion::with(['actividad.trimestre', 'documento.firma', 'documento.sello'])->findOrFail($id_inscripcion);
+
+        // Se retorna una estructura en HTML crudo para ser exportada o impresa
+        return view('formatos.documento_html', compact('inscripcion'));
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Encuesta;
+use App\Models\PreguntaEncuesta;
+use App\Models\RespuestaEncuesta;
+
+class EncuestaController extends Controller
+{
+    public function create(Actividad $actividad)
+    {
+        return view('coordinador.encuestas.create', compact('actividad'));
+    }
+
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'actividad_id' => 'required|exists:actividades,id',
+            'descripcion' => 'nullable|string',
+            'fecha_limite' => 'nullable|date'
+        ]);
+
+        $encuesta = Encuesta::create($data);
+        // crear preguntas si vienen
+        if ($request->filled('preguntas')) {
+            foreach ($request->input('preguntas') as $p) {
+                PreguntaEncuesta::create([
+                    'encuesta_id' => $encuesta->id,
+                    'texto' => $p['texto'],
+                    'tipo' => $p['tipo'] ?? 'texto',
+                    'opciones' => $p['opciones'] ?? null
+                ]);
+            }
+        }
+
+        return back()->with('success','Encuesta creada.');
+    }
+
+    public function responder(Request $request, Encuesta $encuesta)
+    {
+        $respuestas = $request->input('respuestas', []);
+        foreach ($respuestas as $preguntaId => $valor) {
+            RespuestaEncuesta::create([
+                'pregunta_id' => $preguntaId,
+                'persona_id' => auth()->user()->persona->id ?? null,
+                'valor' => is_array($valor) ? json_encode($valor) : $valor
+            ]);
+        }
+        return back()->with('success','Gracias por responder la encuesta.');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
+
+class EstructuraController extends Controller
+{
+    protected array $modelMap = [
+        'modalidad'        => \App\Models\Modalidad::class,
+        'denominacion'     => \App\Models\TipoActividad::class, 
+        'salon'            => \App\Models\Salon::class,
+        'firma'            => \App\Models\Firma::class,
+        'sello'            => \App\Models\Sello::class,
+        'feriado'          => \App\Models\Feriado::class, // Soporte añadido para feriados
+    ];
+
+    protected array $viewMap = [
+        'modalidad'        => 'modalidades',
+        'denominacion'     => 'denominaciones',
+        'salon'            => 'salon',
+        'firma'            => 'firma',     // Corregido a singular acorde a tu captura
+        'sello'            => 'sello',     // Corregido a singular acorde a tu captura
+        'feriado'          => 'feriados',  // Corregido a plural acorde a tu captura
+    ];
+
+    protected array $labels = [
+        'modalidad'        => ['singular' => 'Modalidad', 'plural' => 'Modalidades'],
+        'denominacion'     => ['singular' => 'Tipo de Actividad', 'plural' => 'Tipos de Actividad'],
+        'salon'            => ['singular' => 'Salón', 'plural' => 'Salones'],
+        'firma'            => ['singular' => 'Firma', 'plural' => 'Firmas'],
+        'sello'            => ['singular' => 'Sello', 'plural' => 'Sellos'],
+        'feriado'          => ['singular' => 'Feriado', 'plural' => 'Feriados'], // Soporte añadido
+    ];
+
+    private function normalizeModulo(string $modulo): string
+    {
+        $aliases = [
+            'modalidades'     => 'modalidad',
+            'tipos'           => 'denominacion',
+            'denominaciones'  => 'denominacion',
+            'salones'         => 'salon',
+            'firmas'          => 'firma',
+            'sellos'          => 'sello',
+            'feriados'        => 'feriado', // Soporte añadido
+        ];
+
+        return $aliases[$modulo] ?? $modulo;
+    }
+
+    private function resolveModel(string $modulo)
+    {
+        if (!array_key_exists($modulo, $this->modelMap)) {
+            abort(404, "El módulo '{$modulo}' no existe.");
+        }
+        return $this->modelMap[$modulo];
+    }
+
+    private function getValidationRules(string $modulo, $id = null): array
+    {
+        switch ($modulo) {
+            case 'modalidad':
+                return [
+                    'nombre_modalidad' => 'required|string|max:255',
+                ];
+            case 'denominacion':
+                return [
+                    'nombre'      => 'required|string|max:255',
+                    'descripcion' => 'nullable|string|max:1000',
+                    'duracion'    => 'required',
+                ];
+            case 'salon':
+                return [
+                    'nombre'    => 'required|string|max:255',
+                    'capacidad' => 'required|integer|min:1',
+                ];
+            case 'feriado':
+                return [
+                    'fecha'       => 'required|date',
+                    'descripcion' => 'required|string|max:255',
+                    'recurrente'  => 'nullable|boolean',
+                ];
+            case 'firma':
+            case 'sello':
+                return [
+                    'nombre' => 'required|string|max:255',
+                    'imagen' => 'nullable|image|mimes:jpeg,png,jpg,svg|max:2048',
+                ];
+            default:
+                return [
+                    'nombre'      => 'required|string|max:255',
+                    'descripcion' => 'nullable|string|max:1000',
+                ];
+        }
+    }
+
+    public function index(Request $request, string $modulo)
+    {
+        $modulo = $this->normalizeModulo($modulo);
+        $modelClass = $this->resolveModel($modulo);
+        $labels = $this->labels[$modulo];
+        
+        $registros = $modelClass::all();
+        $data = compact('registros', 'modulo', 'labels');
+
+        $fileName = $this->viewMap[$modulo] ?? $modulo;
+        $customView = "coordinador.entidades_crud.{$fileName}";
+
+        if (view()->exists($customView)) {
+            return view($customView, $data);
+        }
+
+        abort(500, "La vista no se encuentra en: resources/views/". str_replace('.', '/', $customView) . ".blade.php");
+    }
+
+    public function store(Request $request, string $modulo)
+    {
+        $modulo = $this->normalizeModulo($modulo);
+        $modelClass = $this->resolveModel($modulo);
+        
+        $validatedData = $request->validate($this->getValidationRules($modulo));
+
+        if ($request->has('estado')) {
+            $validatedData['estado'] = ($request->estado === 'active' || $request->estado == '1');
+        }
+
+        if ($request->hasFile('imagen')) {
+            $path = $request->file('imagen')->store('uploads/' . $modulo . 's', 'public');
+            $validatedData['imagen'] = $path;
+        }
+
+        $modelClass::create($validatedData);
+
+        return redirect()->back()->with('success', "{$this->labels[$modulo]['singular']} guardada correctamente.");
+    }
+
+    public function update(Request $request, string $modulo, $id)
+    {
+        $modulo = $this->normalizeModulo($modulo);
+        $modelClass = $this->resolveModel($modulo);
+        
+        $validatedData = $request->validate($this->getValidationRules($modulo, $id));
+
+        if ($request->has('estado')) {
+            $validatedData['estado'] = ($request->estado === 'active' || $request->estado == '1');
+        }
+
+        $registro = $modelClass::findOrFail($id);
+
+        if ($request->hasFile('imagen')) {
+            $path = $request->file('imagen')->store('uploads/' . $modulo . 's', 'public');
+            $validatedData['imagen'] = $path;
+        }
+
+        $registro->update($validatedData);
+
+        return redirect()->back()->with('success', "{$this->labels[$modulo]['singular']} actualizada correctamente.");
+    }
+
+    public function destroy(string $modulo, $id)
+    {
+        $modulo = $this->normalizeModulo($modulo);
+        $modelClass = $this->resolveModel($modulo);
+        $registro = $modelClass::findOrFail($id);
+        
+        $tableName = $registro->getTable();
+        $accion = 'eliminada';
+
+        if (Schema::hasColumn($tableName, 'estado')) {
+            $registro->update(['estado' => false]);
+            $accion = 'inhabilitada';
+        } else {
+            $registro->delete();
+        }
+
+        return redirect()->back()->with('success', "{$this->labels[$modulo]['singular']} {$accion} correctamente.");
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Actividad;
+use App\Models\Inscripcion;
+use App\Models\Sesion;
+use Illuminate\Http\Request;
+
+class EstudianteController extends Controller
+{
+    public function __construct()
+    {
+        $this->middleware(['auth','role:estudiante']);
+    }
+
+    public function index()
+    {
+        $persona = auth()->user()->persona;
+        $inscripciones = Inscripcion::where('persona_id',$persona->id)->with('actividad')->paginate(20);
+        return view('estudiante.dashboard', compact('inscripciones'));
+    }
+
+    // Página con lector QR para estudiante (JS)
+    public function scan(Sesion $sesion)
+    {
+        return view('estudiante.scan', compact('sesion'));
+    }
+
+    // Inscribirse (if not authenticated, use public flow)
+    public function inscribirse(Actividad $actividad, Request $request)
+    {
+        $persona = auth()->user()->persona;
+        Inscripcion::create([
+            'persona_id'=>$persona->id,
+            'actividad_id'=>$actividad->id,
+            'fecha_inscripcion'=>now(),
+            'estado'=>'pendiente'
+        ]);
+        return back()->with('success','Inscripción enviada.');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Estudiante;
+use App\Models\ExpedienteEstudiante;
+use App\Models\Role;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+
+class EstudianteUpgradeController extends Controller
+{
+    public function upgrade(Request $request)
+    {
+        $request->validate([
+            'carrera_id' => 'required',
+            'documento_pdf' => 'required|mimes:pdf|max:5120',
+            'foto_carnet' => 'required|image',
+        ]);
+
+        $persona = Auth::user()->persona;
+
+        DB::beginTransaction();
+        try {
+            // 1. Crear registro en Estudiante
+            $estudiante = Estudiante::create([
+                'persona_id' => $persona->id,
+                'carrera_id' => $request->carrera_id,
+                'es_regular' => true,
+            ]);
+
+            // 2. Crear Expediente y guardar documentos
+            $pathCarnet = $request->file('foto_carnet')->store('expedientes/carnets', 'public');
+            $expediente = ExpedienteEstudiante::create([
+                'estudiante_id' => $estudiante->id,
+                'ruta_carnet' => $pathCarnet,
+            ]);
+
+            // 3. Cambiar Rol de 'publico' a 'estudiante'
+            $rolPublico = Role::where('nombre', 'publico')->first();
+            $rolEstudiante = Role::where('nombre', 'estudiante')->first();
+
+            $persona->roles()->detach($rolPublico->id);
+            $persona->roles()->attach($rolEstudiante->id, ['activo' => true, 'asignado_en' => now()]);
+
+            // 4. Actualizar sesión
+            session(['role_activo' => 'estudiante']);
+
+            DB::commit();
+            return redirect()->route('estudiante.index')->with('success', '¡Ahora eres estudiante regular!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Error al procesar documentos.');
+        }
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use App\Models\Feriado; // crea este modelo y migration
+
+class FeriadoController extends Controller
+{
+    public function __construct()
+    {
+        $this->middleware(['auth','role:coordinador']);
+    }
+
+    public function index()
+    {
+        $feriados = Feriado::orderBy('fecha')->get();
+        return view('coordinador.feriados.index', compact('feriados'));
+    }
+
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'fecha' => 'required|date',
+            'descripcion' => 'required|string|max:255',
+            'recurrente' => 'boolean'
+        ]);
+        Feriado::create($data);
+        return back()->with('success','Feriado agregado.');
+    }
+
+    public function destroy(Feriado $feriado)
+    {
+        $feriado->delete();
+        return back()->with('success','Feriado eliminado.');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Inscripcion;
+use Illuminate\Http\Request;
+
+class InscripcionController extends Controller
+{
+    // Lógica transaccional pura
+    public function registrarInscripcion(Request $request)
+    {
+        $data = $request->validate([
+            'id_actividad' => 'required|exists:actividades,id_actividad',
+            'id_estudiante' => 'nullable|integer',
+            'id_publico_general' => 'nullable|integer'
+        ]);
+
+        $data['fecha_registro'] = now()->toDateString();
+        
+        $inscripcion = Inscripcion::create($data);
+        return response()->json(['success' => true, 'message' => 'Inscripción procesada correctamente.', 'data' => $inscripcion]);
+    }
+
+    public function cancelarInscripcion($id)
+    {
+        $inscripcion = Inscripcion::findOrFail($id);
+        $inscripcion->delete();
+
+        return response()->json(['success' => true, 'message' => 'Inscripción cancelada de forma satisfactoria.']);
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Modalidad;
+use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
+
+class ModalidadController extends Controller
+{
+    public function index(): View
+    {
+        $modalidades = Modalidad::orderBy('id', 'desc')->get();
+        return view('estructura_de_la_actividad.modalidad', compact('modalidades'));
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'nombre'      => 'required|string|max:100',
+            'descripcion' => 'nullable|string',
+            'estado'      => 'required|string|in:active,inactive',
+        ], [
+            'nombre.required' => 'El nombre de la modalidad es obligatorio.',
+            'nombre.max'      => 'El nombre no puede exceder los 100 caracteres.',
+            'estado.in'       => 'El estado seleccionado no es válido.'
+        ]);
+
+        Modalidad::create([
+            'nombre'      => $request->nombre,
+            'descripcion' => $request->descripcion,
+            'estado'      => $request->estado === 'active',
+        ]);
+
+        return redirect()->route('superuser.modalidad')
+            ->with('success', 'Modalidad creada con éxito.');
+    }
+
+    public function update(Request $request, string $id): RedirectResponse
+    {
+        $modalidad = Modalidad::findOrFail($id);
+
+        $request->validate([
+            'nombre'      => 'required|string|max:100',
+            'descripcion' => 'nullable|string',
+            'estado'      => 'required|string|in:active,inactive',
+        ], [
+            'nombre.required' => 'El nombre de la modalidad es obligatorio.',
+            'nombre.max'      => 'El nombre no puede exceder los 100 caracteres.',
+            'estado.in'       => 'El estado seleccionado no es válido.'
+        ]);
+
+        $modalidad->update([
+            'nombre'      => $request->nombre,
+            'descripcion' => $request->descripcion,
+            'estado'      => $request->estado === 'active',
+        ]);
+
+        return redirect()->route('superuser.modalidad')
+            ->with('success', 'Modalidad actualizada con éxito.');
+    }
+
+    public function destroy(string $id): RedirectResponse
+    {
+        $modalidad = Modalidad::findOrFail($id);
+
+        $modalidad->update([
+            'estado' => false
+        ]);
+
+        return redirect()->route('superuser.modalidad')
+            ->with('success', 'Modalidad inhabilitada con éxito.');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\{Actividad, Certificado, Encuesta, RespuestaEncuesta};
+use Illuminate\Support\Facades\DB;
+
+class OperacionController extends Controller
+{
+    public function generarCertificadosMasivos($actividad_id) {
+        $actividad = Actividad::with('inscripciones.persona')->findOrFail($actividad_id);
+
+        foreach ($actividad->inscripciones as $insc) {
+            // Lógica: Si asistió a las sesiones, crear certificado
+            Certificado::create([
+                'persona_id' => $insc->persona_id,
+                'actividad_id' => $actividad->id,
+                'tipo' => 'participante',
+                'codigo_verificacion' => strtoupper(bin2hex(random_bytes(5))),
+                'fecha_emision' => now(),
+            ]);
+        }
+
+        // También generar para los Ponentes
+        foreach ($actividad->sesiones as $sesion) {
+            foreach ($sesion->ponentes as $ponente) {
+                Certificado::create([
+                    'persona_id' => $ponente->persona_id ?? $ponente->docente->persona_id,
+                    'actividad_id' => $actividad->id,
+                    'sesion_id' => $sesion->id,
+                    'tipo' => 'ponente',
+                    'codigo_verificacion' => strtoupper(bin2hex(random_bytes(5))),
+                    'fecha_emision' => now(),
+                ]);
+            }
+        }
+
+        return back()->with('success', 'Certificados generados para todos los participantes y ponentes.');
+    }
+
+    public function verGraficas($id) {
+        $encuesta = Encuesta::with('preguntas.respuestas')->findOrFail($id);
+        // Aquí preparas los datos para Chart.js
+        return view('coordinador.operaciones.graficas', compact('encuesta'));
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\SolicitudInduccion;
+use App\Models\CartaPasantia;
+use Illuminate\Support\Facades\Auth;
+
+class PasantiaController extends Controller
+{
+    // El Estudiante envía la solicitud
+    public function enviarSolicitud(Request $request)
+    {
+        $request->validate([
+            'carta_aprobacion' => 'required|mimes:pdf,jpg,png|max:2048',
+            'carnet' => 'required|image|max:1024',
+        ]);
+
+        // Guardar archivos
+        $rutaCarta = $request->file('carta_aprobacion')->store('pasantias/cartas', 'public');
+        $rutaCarnet = $request->file('carnet')->store('pasantias/carnets', 'public');
+
+        SolicitudInduccion::create([
+            'estudiante_id' => Auth::user()->persona->estudiante->id,
+            'ruta_carta_aprobacion' => $rutaCarta,
+            'ruta_carnet' => $rutaCarnet,
+            'estado' => 'pendiente',
+        ]);
+
+        return back()->with('status', 'Solicitud enviada. Espera la revisión de la coordinación.');
+    }
+
+    // La Coordinadora aprueba y verifica el límite de 3 cartas
+    public function aprobarSolicitud($id)
+    {
+        $solicitud = SolicitudInduccion::findOrFail($id);
+        $solicitud->update(['estado' => 'aprobado']);
+
+        // Aquí podrías crear automáticamente la primera carta de solicitud
+        // Pero validando que no tenga más de 3 activas
+        $conteoCartas = CartaPasantia::where('estudiante_id', $solicitud->estudiante_id)
+            ->where('status', 'activa')
+            ->count();
+
+        if ($conteoCartas < 3) {
+            // Lógica para generar carta...
+        }
+
+        return back()->with('status', 'Estudiante aprobado para inducción.');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+
+class PersonaController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
+    {
+        //
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create()
+    {
+        //
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(Request $request)
+    {
+        //
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(string $id)
+    {
+        //
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(string $id)
+    {
+        //
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, string $id)
+    {
+        //
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(string $id)
+    {
+        //
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+
+class PersonaRolController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
+    {
+        //
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create()
+    {
+        //
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(Request $request)
+    {
+        //
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(string $id)
+    {
+        //
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(string $id)
+    {
+        //
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, string $id)
+    {
+        //
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(string $id)
+    {
+        //
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Planificacion;
+
+class PlanificacionController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+    public function index() {
+        $registros = Planificacion::all();
+        return view('coordinador.entidades_crud_y_procesos.planificacion', compact('registros'));
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(Request $request)
+    {
+        // 1. Validamos únicamente los campos que vienen de la vista (Título y Fecha)
+        $validatedData = $request->validate([
+            'titulo'         => 'required|string|max:255',
+            'fecha_creacion' => 'required|date',
+        ]);
+
+        // 2. Extraemos el año de la fecha seleccionada y lo añadimos al arreglo de datos
+        $validatedData['anio'] = date('Y', strtotime($validatedData['fecha_creacion']));
+
+        // 3. Creamos el registro en la base de datos
+        Planificacion::create($validatedData);
+
+        return redirect()->back()->with('success', 'Planificación guardada correctamente.');
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, $id)
+    {
+        // 1. Validamos únicamente los campos editables de la vista
+        $validatedData = $request->validate([
+            'titulo'         => 'required|string|max:255',
+            'fecha_creacion' => 'required|date',
+        ]);
+
+        // 2. Volvemos a extraer el año automáticamente si la fecha de creación se actualiza
+        $validatedData['anio'] = date('Y', strtotime($validatedData['fecha_creacion']));
+
+        $planificacion = Planificacion::findOrFail($id);
+        $planificacion->update($validatedData);
+
+        return redirect()->back()->with('success', 'Planificación actualizada correctamente.');
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy($id)
+    {
+        $planificacion = Planificacion::findOrFail($id);
+        $planificacion->delete();
+
+        return redirect()->back()->with('success', 'Planificación eliminada correctamente.');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Requests\ProfileUpdateRequest;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Redirect;
+use Illuminate\View\View;
+
+class ProfileController extends Controller
+{
+    /**
+     * Display the user's profile form.
+     */
+    public function edit(Request $request): View
+    {
+        return view('profile.edit', [
+            'user' => $request->user(),
+        ]);
+    }
+
+    /**
+     * Update the user's profile information.
+     */
+    public function update(ProfileUpdateRequest $request): RedirectResponse
+    {
+        $request->user()->fill($request->validated());
+
+        if ($request->user()->isDirty('email')) {
+            $request->user()->email_verified_at = null;
+        }
+
+        $request->user()->save();
+
+        return Redirect::route('profile.edit')->with('status', 'profile-updated');
+    }
+
+    /**
+     * Delete the user's account.
+     */
+    public function destroy(Request $request): RedirectResponse
+    {
+        $request->validateWithBag('userDeletion', [
+            'password' => ['required', 'current_password'],
+        ]);
+
+        $user = $request->user();
+
+        Auth::logout();
+
+        $user->delete();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return Redirect::to('/');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Actividad;
+
+class PublicController extends Controller
+{
+    public function index()
+    {
+        // Si el usuario ya está autenticado, lo redirige automáticamente a su dashboard
+        if (auth()->check()) {
+            return redirect()->route('publico.dashboard'); // O la ruta correspondiente a su dashboard
+        }
+
+        // Redirige explícitamente a la ruta con nombre 'login' para que cambie la URL en el navegador
+        return redirect()->route('login');
+        
+        // Nota: Si no tiene una ruta con el nombre 'login', puede usar la URL directa:
+        // return redirect('/login');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Actividad;
+use App\Models\Inscripcion;
+use Carbon\Carbon;
+
+class PublicoController extends Controller
+{
+    /**
+     * Muestra el dashboard del público general con las actividades del mes en curso.
+     */
+    public function dashboard()
+    {
+        $now = Carbon::now();
+        $mesActual = $now->month;
+        $anioActual = $now->year;
+
+        // CONSULTA DE ACTIVIDADES
+        // Nota: Si para pruebas locales deseas ver todas las actividades sin importar la fecha actual,
+        // puedes comentar las líneas ->whereYear y ->whereMonth de abajo.
+        $actividades = Actividad::whereYear('fecha', $anioActual)
+            ->whereMonth('fecha', $mesActual)
+            ->where('estado', '!=', 'cancelada')
+            ->with(['tipo', 'salon', 'modalidadRelacion'])
+            ->get();
+
+        $persona = auth()->user()->persona;
+        $estudiante = $persona ? $persona->estudiante : null;
+
+        // Obtener actividades en las que el usuario autenticado ya se encuentra inscrito
+        $inscripcionesUsuario = [];
+        if ($persona) {
+            $inscripcionesUsuario = Inscripcion::where(function ($query) use ($persona, $estudiante) {
+                if ($estudiante) {
+                    $query->where('id_estudiante', $estudiante->id);
+                } else {
+                    $query->where('id_publico_general', $persona->id);
+                }
+            })->pluck('id_actividad')->toArray();
+        }
+
+        return view('publico.dashboardPublico', compact('actividades', 'inscripcionesUsuario', 'now'));
+    }
+
+    /**
+     * Procesa la inscripción a una actividad, validando y completando el perfil si es necesario.
+     */
+    public function inscribir(Actividad $actividad, Request $request)
+    {
+        $user = auth()->user();
+        $persona = $user->persona;
+
+        if (!$persona) {
+            return back()->withErrors(['error' => 'No se encontró un perfil de persona asociado a su cuenta.']);
+        }
+
+        // Si se envió el formulario para completar o actualizar los datos del perfil
+        if ($request->has('completar_perfil')) {
+            
+            // Validación formal estricta
+            $request->validate([
+                'nombres'   => ['required', 'string', 'max:255', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s.,()\-#]+$/u'],
+                'apellidos' => ['required', 'string', 'max:255', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s.,()\-#]+$/u'],
+                'cedula'    => ['required', 'string', 'max:20', 'regex:/^[0-9a-zA-Z\-#]+$/', 'unique:personas,cedula,' . $persona->id],
+                'telefono'  => ['required', 'string', 'max:25', 'regex:/^[0-9a-zA-Z\s+\-#()]+$/'],
+            ], [
+                'nombres.required'   => 'El campo nombres es obligatorio.',
+                'nombres.regex'      => 'Los nombres contienen caracteres especiales no permitidos (solo se permiten letras, espacios, puntos, comas, guiones, numerales y paréntesis).',
+                'apellidos.required' => 'El campo apellidos es obligatorio.',
+                'apellidos.regex'    => 'Los apellidos contienen caracteres especiales no permitidos (solo se permiten letras, espacios, puntos, comas, guiones, numerales y paréntesis).',
+                'cedula.required'    => 'El campo cédula de identidad es obligatorio.',
+                'cedula.regex'       => 'La cédula de identidad contiene un formato inválido (solo se permiten números, letras, guiones y numerales).',
+                'cedula.unique'      => 'La cédula de identidad ya se encuentra registrada en el sistema.',
+                'telefono.required'  => 'El campo teléfono de contacto es obligatorio.',
+                'telefono.regex'     => 'El teléfono contiene caracteres no válidos.',
+            ]);
+
+            // Actualización de la información básica en la tabla personas
+            $persona->update([
+                'nombres'   => $request->nombres,
+                'apellidos' => $request->apellidos,
+                'cedula'    => $request->cedula,
+                'telefono'  => $request->telefono,
+            ]);
+        }
+
+        // Validación de consistencia de los datos en el backend
+        if (empty($persona->cedula) || empty($persona->telefono) || empty($persona->nombres) || empty($persona->apellidos)) {
+            return back()->withErrors(['error' => 'La inscripción no pudo procesarse debido a que su perfil cuenta con campos obligatorios vacíos.'])
+                         ->withInput(); // Mantiene los campos en el formulario en caso de fallar
+        }
+
+        // Comprobación de perfil del estudiante
+        $estudiante = $persona->estudiante;
+
+        // Comprobación de inscripción duplicada corregida (Evita la ambigüedad en el OR)
+        $yaInscrito = Inscripcion::where('id_actividad', $actividad->id_actividad)
+            ->where(function ($query) use ($persona, $estudiante) {
+                if ($estudiante) {
+                    $query->where('id_estudiante', $estudiante->id);
+                } else {
+                    $query->where('id_publico_general', $persona->id);
+                }
+            })->exists();
+
+        if ($yaInscrito) {
+            return back()->withErrors(['error' => 'Usted ya se encuentra inscrito en esta actividad.']);
+        }
+
+        // Registro de la inscripción en base de datos
+        Inscripcion::create([
+            'fecha_registro'     => Carbon::now()->toDateString(),
+            'id_estudiante'      => $estudiante ? $estudiante->id : null,
+            'id_publico_general' => !$estudiante ? $persona->id : null,
+            'id_actividad'       => $actividad->id_actividad,
+            'estado'             => 'pendiente'
+        ]);
+
+        session()->flash('success', '¡Su solicitud de inscripción se ha registrado exitosamente!');
+
+        return back();
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\{Persona, Usuario, Role, Actividad, Curriculum,
+ SolicitudEmpleo, Docente, Tema, Certificado, SolicitudInduccion,
+ Cargo, Profesion, TipoEstudiante, Estudiante, ExpedienteEstudiante, Carrera, Empleado};
+use Illuminate\Support\Facades\{DB, Hash, Validator};
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\AsistenciasExport; // Asumiendo que crearás uno similar para reportes generales
+
+class RectorController extends Controller
+{
+    /**
+     * Dashboard con KPIs (Estadísticas reales)
+     */
+    public function dashboard()
+    {
+        $totalUsuarios = Usuario::count();
+        $solicitudesPendientes = SolicitudEmpleo::where('estado', 'pendiente')->count();
+        $totalCoordinadores = Persona::whereHas('roles', fn($q) => $q->where('nombre', 'coordinador'))->count();
+
+        $ultimosLogs = DB::table('persona_rol')
+            ->join('personas', 'persona_rol.persona_id', '=', 'personas.id')
+            ->join('roles', 'persona_rol.rol_id', '=', 'roles.id')
+            ->select('persona_rol.created_at', 'personas.nombres', 'personas.apellidos', 'roles.nombre as nombre_rol')
+            ->latest('persona_rol.created_at')->take(5)->get()
+            ->map(function($log) {
+                $log->accion = "Rol '" . ucfirst($log->nombre_rol) . "' asignado a {$log->nombres} {$log->apellidos}";
+                $log->created_at = \Carbon\Carbon::parse($log->created_at);
+                return $log;
+            });
+
+        // Cargamos la relación tema con su docente, el tipo de actividad y el salón asignado
+        $actividades = Actividad::with(['tema.docente.persona', 'tipo', 'salon'])
+            ->where('fecha', '>=', now())
+            ->orderBy('fecha', 'asc')->take(5)->get();
+
+        $actividadesMapped = $actividades->map(function($act) {
+            // Formatear el horario de la actividad usando su propia fecha y hora
+            $horario = '-';
+            if ($act->fecha) {
+                $fechaFormateada = $act->fecha->format('d/m/Y');
+                $horaFormateada = $act->hora_inicio
+                    ? date('H:i', strtotime($act->hora_inicio))
+                    : '';
+                $horario = trim("$fechaFormateada $horaFormateada");
+            }
+
+            // Obtener el docente asignado a través del tema
+            $docenteNombre = 'N/A';
+            if ($act->tema && $act->tema->docente) {
+                $docenteObj = $act->tema->docente;
+                $nombres = $docenteObj->nombres ?? ($docenteObj->persona->nombres ?? '');
+                $apellidos = $docenteObj->apellidos ?? ($docenteObj->persona->apellidos ?? '');
+                $docenteNombre = trim("$nombres $apellidos") ?: 'N/A';
+            }
+
+            return [
+                'id' => $act->id_actividad, // Clave primaria real del nuevo modelo Actividad
+                'titulo' => $act->nombre,
+                'horario' => $horario,
+                'docente' => $docenteNombre,
+                'salon' => $act->salon ? ($act->salon->nombre ?? $act->salon->descripcion ?? 'Definido') : 'No definido',
+                'capacidad' => $act->cupos ?? 'N/A',
+            ];
+        })->keyBy('id');
+
+        return view('rector.dashboardRector', compact('totalUsuarios', 'solicitudesPendientes', 'totalCoordinadores', 'ultimosLogs', 'actividades', 'actividadesMapped'));
+    }
+
+    // ==========================================
+    // 2. Gestionar Usuarios (CRUD)
+    // ==========================================
+    public function usuariosIndex(Request $request)
+    {
+        $buscar = $request->get('buscar');
+        $rolFiltro = $request->get('rol');
+
+        $usuarios = Persona::with(['usuario', 'roles', 'estudiante.carrera', 'docentes.profesion', 'empleado.cargo'])
+            ->when($buscar, function($q) use ($buscar) {
+                $q->where('cedula', 'like', "%$buscar%")->orWhere('nombres', 'like', "%$buscar%");
+            })
+            ->when($rolFiltro, function($q) use ($rolFiltro) {
+                $q->whereHas('roles', fn($query) => $query->where('nombre', $rolFiltro));
+            })
+            ->paginate(15)->withQueryString();
+
+        return view('rector.usuarios.index', [
+            'usuarios' => $usuarios,
+            'roles' => Role::all(),
+            'carreras' => Carrera::where('estado', 1)->get(),
+            'cargos' => Cargo::all(),
+            'profesiones' => Profesion::all()
+        ]);
+    }
+
+    public function usuariosStore(Request $request) {
+        return $this->saveUser($request);
+    }
+
+    public function usuariosUpdate(Request $request, $id) {
+        return $this->saveUser($request, $id);
+    }
+
+    private function saveUser($request, $id = null) {
+        DB::beginTransaction();
+        try {
+            if ($id) {
+                $persona = Persona::findOrFail($id);
+                $usuario = $persona->usuario;
+            } else {
+                $persona = new Persona;
+                $usuario = new Usuario;
+                $persona->cedula = $request->cedula;
+            }
+
+            // Datos de Persona
+            $persona->nombres = $request->nombres;
+            $persona->apellidos = $request->apellidos;
+            $persona->telefono = $request->telefono;
+            $persona->sexo = $request->sexo;
+            $persona->save();
+
+            // Datos de Usuario
+            $usuario->persona_id = $persona->id;
+            $usuario->email = $request->email;
+            $usuario->activo = 1;
+            if ($request->filled('password')) {
+                $usuario->password = Hash::make($request->password);
+            }
+            $usuario->save();
+
+            // Rol
+            $persona->roles()->sync([$request->rol_id => ['activo' => 1, 'asignado_en' => now(), 'asignado_por' => auth()->id()]]);
+
+            // Perfiles
+            $rol = Role::find($request->rol_id);
+            $rolNombre = strtolower($rol->nombre);
+
+            if ($rolNombre == 'estudiante') {
+                Estudiante::updateOrCreate(['persona_id' => $persona->id], ['carrera_id' => $request->carrera_id]);
+            } elseif (in_array($rolNombre, ['docente', 'coordinador', 'rector'])) {
+                Docente::updateOrCreate(['persona_id' => $persona->id], ['profesion_id' => $request->profesion_id]);
+                Empleado::updateOrCreate(['persona_id' => $persona->id], ['cargo_id' => $request->cargo_id]);
+            }
+
+            DB::commit();
+            return back()->with('success', 'Operación exitosa.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Error: ' . $e->getMessage());
+        }
+    }
+
+    public function toggleStatus($id) {
+        $u = Usuario::where('persona_id', $id)->firstOrFail();
+        $u->activo = !$u->activo;
+        $u->save();
+        return back()->with('success', 'Estado cambiado.');
+    }
+
+    /**
+     * Procesar Solicitud de Empleo
+     */
+    public function procesarSolicitud(Request $request, $id)
+    {
+        $request->validate(['estado' => 'required|in:aprobada,rechazada']);
+
+        $solicitud = SolicitudEmpleo::findOrFail($id);
+        $solicitud->update([
+            'estado' => $request->estado,
+            'revisado_por' => auth()->user()->persona_id,
+            'fecha_revision' => now(),
+        ]);
+
+        return back()->with('success', "Solicitud " . $request->estado);
+    }
+
+    /**
+     * Estadísticas de Empleo (Gráficas)
+     */
+    public function reporteEmpleo()
+    {
+        $statsEstado = [
+            'pendientes' => SolicitudEmpleo::where('estado', 'pendiente')->count(),
+            'aprobadas'  => SolicitudEmpleo::where('estado', 'aprobada')->count(),
+            'rechazadas' => SolicitudEmpleo::where('estado', 'rechazada')->count(),
+        ];
+
+        $porProfesion = DB::table('solicitudes_empleo')
+            ->join('personas', 'solicitudes_empleo.persona_id', '=', 'personas.id')
+            ->leftJoin('docentes', 'personas.id', '=', 'docentes.persona_id')
+            ->leftJoin('profesiones', 'docentes.profesion_id', '=', 'profesiones.id')
+            ->select('profesiones.nombre', DB::raw('count(solicitudes_empleo.id) as total'))
+            ->groupBy('profesiones.nombre')
+            ->get();
+
+        return view('rector.reportes.empleo', compact('statsEstado', 'porProfesion'));
+    }
+
+   // ==========================================
+    // 3. GESTIÓN DE CARGOS (CRUD Completo)
+    // ==========================================
+    public function cargosIndex(Request $request)
+    {
+        // Usamos paginate para que la tabla sea manejable
+        $cargos = \App\Models\Cargo::paginate(10);
+        return view('rector.cargos.index', compact('cargos'));
+    }
+
+    public function cargosStore(Request $request)
+    {
+        $request->validate(['nombre' => 'required|string|unique:cargos,nombre']);
+        \App\Models\Cargo::create(['nombre' => $request->nombre]);
+        return back()->with('success', 'Cargo creado exitosamente.');
+    }
+
+    public function cargosUpdate(Request $request, $id)
+    {
+        $cargo = \App\Models\Cargo::findOrFail($id);
+        $request->validate(['nombre' => 'required|string|unique:cargos,nombre,'.$id]);
+        $cargo->update(['nombre' => $request->nombre]);
+        return back()->with('success', 'Cargo actualizado.');
+    }
+
+    public function cargosToggle($id)
+{
+    $cargo = \App\Models\Cargo::findOrFail($id);
+
+    // Cambiamos el estado: si es 1 pasa a 0, si es 0 pasa a 1
+    $cargo->estado = !$cargo->estado;
+    $cargo->save();
+
+    $mensaje = $cargo->estado ? 'Cargo habilitado exitosamente.' : 'Cargo inhabilitado correctamente.';
+
+    return back()->with('success', $mensaje);
+    }
+
+    // ==========================================
+    // 4. GESTIÓN DE PROFESIONES (CRUD Completo)
+    // ==========================================
+    public function profesionesIndex(Request $request)
+    {
+        $registros = \App\Models\Profesion::paginate(10);
+        return view('rector.profesiones.index', compact('registros'));
+    }
+
+    public function profesionesStore(Request $request)
+    {
+        $request->validate(['nombre' => 'required|string|unique:profesiones,nombre']);
+        \App\Models\Profesion::create($request->all());
+        return back()->with('success', 'Profesión registrada correctamente.');
+    }
+
+    public function profesionesUpdate(Request $request, $id)
+    {
+        $profesion = \App\Models\Profesion::findOrFail($id);
+        $request->validate(['nombre' => 'required|string|unique:profesiones,nombre,'.$id]);
+        $profesion->update($request->all());
+        return back()->with('success', 'Profesión actualizada con éxito.');
+    }
+
+    public function profesionesToggle($id)
+    {
+        $profesion = \App\Models\Profesion::findOrFail($id);
+        // Usamos la columna 'estado' del modelo
+        $profesion->estado = !$profesion->estado;
+        $profesion->save();
+
+        return back()->with('success', 'Estado de la profesión actualizado.');
+    }
+
+    /**
+     * REPORTE: Actividades por Coordinador y Frecuencia
+     */
+    public function reporteActividades()
+    {
+        // 1. Actividades por cada coordinador (Estadística para las barras)
+        $reporteCoordinadores = Persona::whereHas('roles', fn($q) => $q->where('nombre', 'coordinador'))
+            ->withCount('documentosExpediente')
+            ->get();
+
+        // 2. Frecuencia de tipos de actividad (Corregido con la tabla 'tipo_actividades' y su llave primaria)
+        $frecuenciaActividades = DB::table('actividades')
+            ->join('tipo_actividades', 'actividades.id_tipo_actividad', '=', 'tipo_actividades.id_tipo_actividad')
+            ->select('tipo_actividades.nombre', DB::raw('count(*) as total'))
+            ->groupBy('tipo_actividades.nombre')
+            ->get();
+
+        // 3. LISTADO DE ACTIVIDADES (Adaptado: quitamos creador y cargamos la relación 'tema.docente')
+        $actividades = Actividad::with(['tipo', 'tema.docente'])
+            ->latest()
+            ->take(20)
+            ->get();
+
+        // Enviamos las 3 variables a la vista
+        return view('rector.reportes.actividades', compact(
+            'reporteCoordinadores',
+            'frecuenciaActividades',
+            'actividades'
+        ));
+    }
+
+    /**
+     * REPORTE: Docentes más frecuentes (basado en ponencias)
+     */
+    public function docentesIndex(Request $request)
+    {
+        $docentesMasUsados = Docente::with('persona', 'profesion')
+            ->withCount('ponencias')
+            ->orderBy('ponencias_count', 'desc')
+            ->paginate(15);
+
+        return view('rector.docentes.index', compact('docentesMasUsados'));
+    }
+
+    /**
+     * Exportación a PDF de las actividades del mes
+     */
+    public function exportarActividadesPDF()
+    {
+        // Corregido: cambiamos 'modalidad' por 'modalidadRelacion' y removemos 'creador' para evitar fallos
+        $actividades = Actividad::with(['tipo', 'modalidadRelacion'])->get();
+        $pdf = Pdf::loadView('rector.reportes.pdf_actividades', compact('actividades'))
+                  ->setPaper('a4', 'landscape');
+
+        return $pdf->download('reporte_actividades_general.pdf');
+    }
+
+    /**
+     * RECTOR COMO DOCENTE: Ver sus propios temas/clases
+     */
+    public function misSesiones()
+    {
+        $personaId = auth()->user()->persona_id;
+
+        // Buscamos el perfil de docente de la persona logueada
+        $docente = Docente::where('persona_id', $personaId)->first();
+
+        // Buscamos los temas asociados a este docente (para no romper la vista se compacta como "sesiones")
+        $sesiones = $docente
+            ? Tema::where('id_docente', $docente->id)->get()
+            : collect();
+
+        return view('rector.mis_sesiones', compact('sesiones'));
+    }
+
+    /**
+     * RECTOR COMO DOCENTE: Sus certificados recibidos
+     */
+    public function misCertificados()
+    {
+        $certificados = Certificado::where('persona_id', auth()->user()->persona_id)
+            ->with('actividad')
+            ->get();
+
+        return view('rector.mis_certificados', compact('certificados'));
+    }
+
+    /**
+     * Revisión de Estudiantes para Pasantías
+     */
+    public function pasantiasIndex()
+    {
+        $solicitudes = SolicitudInduccion::with(['estudiante.persona', 'estudiante.carrera'])
+            ->latest()
+            ->paginate(20);
+
+        return view('rector.pasantias.index', compact('solicitudes'));
+    }
+
+    public function solicitudesIndex(Request $request)
+    {
+        $estado = $request->get('estado');
+
+        $solicitudes = \App\Models\SolicitudEmpleo::with([
+            'persona.usuario',
+            'persona.curriculum',
+            'persona.docentes.profesion'
+        ])
+        ->when($estado, function ($query, $estado) {
+            return $query->where('estado', $estado);
+        })
+        ->latest()
+        ->paginate(10)
+        ->withQueryString();
+
+        return view('rector.solicitudes.index', compact('solicitudes'));
+    }
+
+
+
+  // ==========================================
+// 8. GESTIÓN DE TIPOS DE ESTUDIANTE (CRUD)
+// ==========================================
+public function tipoEstudiantesIndex()
+{
+    // Usamos $registros para que coincida con la vista
+    $registros = \App\Models\TipoEstudiante::paginate(10);
+    return view('rector.tipo_estudiantes.index', compact('registros'));
+}
+
+ public function tipoEstudiantesStore(Request $request)
+    {
+        $request->validate([
+            'nombre' => 'required|string|unique:tipo_estudiantes,nombre'
+        ]);
+
+        \App\Models\TipoEstudiante::create([
+            'nombre' => $request->nombre,
+            'estado' => true
+        ]);
+
+        return back()->with('success', 'Registro guardado exitosamente.');
+    }
+
+    public function tipoEstudiantesUpdate(Request $request, $id)
+    {
+        $tipo = \App\Models\TipoEstudiante::findOrFail($id);
+        $request->validate([
+            'nombre' => 'required|string|unique:tipo_estudiantes,nombre,'.$id
+        ]);
+
+        $tipo->update(['nombre' => $request->nombre]);
+        return back()->with('success', 'Registro actualizado correctamente.');
+    }
+
+    public function tipoEstudiantesToggle($id)
+    {
+        $tipo = \App\Models\TipoEstudiante::findOrFail($id);
+        $tipo->update(['estado' => !$tipo->estado]);
+        return back()->with('success', 'Estado actualizado.');
+    }
+
+    // ==========================================
+    // 9. GESTIÓN DE CARRERAS (CRUD Completo)
+    // ==========================================
+   public function carrerasIndex()
+    {
+        $registros = \App\Models\Carrera::paginate(10);
+        return view('rector.carreras.index', compact('registros'));
+    }
+
+    public function carrerasStore(Request $request)
+    {
+        $request->validate([
+            'nombre' => 'required|string|unique:carreras,nombre',
+            'descripcion' => 'nullable|string'
+        ]);
+
+        \App\Models\Carrera::create([
+            'nombre' => $request->nombre,
+            'descripcion' => $request->descripcion,
+            'estado' => true
+        ]);
+
+        return back()->with('success', 'Carrera creada exitosamente.');
+    }
+
+    public function carrerasUpdate(Request $request, $id)
+    {
+        $carrera = \App\Models\Carrera::findOrFail($id);
+        $request->validate([
+            'nombre' => 'required|string|unique:carreras,nombre,'.$id,
+            'descripcion' => 'nullable|string'
+        ]);
+
+        $carrera->update($request->all());
+        return back()->with('success', 'Carrera actualizada correctamente.');
+    }
+
+    public function carrerasToggle($id)
+{
+    $carrera = \App\Models\Carrera::findOrFail($id);
+
+    // Cambiamos el estado (si es true pasa a false y viceversa)
+    $carrera->estado = !$carrera->estado;
+    $carrera->save();
+
+    $status = $carrera->estado ? 'habilitada' : 'inhabilitada';
+    return back()->with('success', "La carrera ha sido $status correctamente.");
+}
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+
+class RolController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
+    {
+        //
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create()
+    {
+        //
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(Request $request)
+    {
+        //
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(string $id)
+    {
+        //
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(string $id)
+    {
+        //
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, string $id)
+    {
+        //
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(string $id)
+    {
+        //
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Estudiante;
+use App\Models\ExpedienteEstudiante;
+use App\Models\Role;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+
+class RoleActionController extends Controller
+{
+    // Cambiar entre roles (Rector a Docente, etc.)
+    public function switchRole($role)
+    {
+        $user = Auth::user();
+        $rolesUsuario = $user->persona->roles->pluck('nombre')->map(fn($r) => strtolower($r))->toArray();
+
+        if (in_array(strtolower($role), $rolesUsuario)) {
+            session(['role_activo' => strtolower($role)]);
+            return redirect()->route(strtolower($role) . '.dashboard')->with('status', "Cambiado a vista de $role");
+        }
+
+        return back()->with('error', 'No tienes asignado este rol.');
+    }
+
+    // Pasar de Público a Estudiante Regular (Subida de documentos)
+    public function upgradeAEstudiante(Request $request)
+    {
+        $request->validate([
+            'carrera_id' => 'required|exists:carreras,id',
+            'foto_carnet' => 'required|image|max:2048',
+            'constancia_aprobacion' => 'required|mimes:pdf|max:5120',
+        ]);
+
+        $persona = Auth::user()->persona;
+
+        DB::beginTransaction();
+        try {
+            // 1. Crear registro de estudiante
+            $estudiante = Estudiante::create([
+                'persona_id' => $persona->id,
+                'carrera_id' => $request->carrera_id,
+                'es_regular' => true,
+            ]);
+
+            // 2. Guardar archivos
+            $path = $request->file('foto_carnet')->store('expedientes/carnets', 'public');
+            ExpedienteEstudiante::create([
+                'estudiante_id' => $estudiante->id,
+                'ruta_carnet' => $path,
+            ]);
+
+            // 3. Cambiar Rol
+            $rolEst = Role::where('nombre', 'estudiante')->first();
+            $persona->roles()->syncWithoutDetaching([$rolEst->id => ['activo' => true, 'asignado_en' => now()]]);
+
+            session(['role_activo' => 'estudiante']);
+            DB::commit();
+
+            return redirect()->route('estudiante.dashboard')->with('status', '¡Felicidades! Ahora eres estudiante regular.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Error al procesar la solicitud.');
+        }
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+class RoleSwitchController extends Controller
+{
+    public function switchRole($newRole)
+    {
+        $user = Auth::user();
+        $rolesDisponibles = $user->persona->roles->pluck('nombre')->toArray();
+
+        if (in_array($newRole, $rolesDisponibles)) {
+            session(['role_activo' => $newRole]);
+
+            // Usamos el trait para redirigir al dashboard correcto
+            return redirect($this->redirectToDashboardByRole($user));
+        }
+
+        return back()->with('error', 'No tienes permiso para este rol.');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Actividad;
+use App\Models\Sesion;
+use App\Models\PonenteSesion;
+use App\Models\Asistencia;
+use App\Models\Persona;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel; // require maatwebsite/excel
+use App\Exports\AsistenciasExport; // crea este Export
+use Carbon\Carbon;
+
+class SesionController extends Controller
+{
+    public function __construct()
+    {
+        $this->middleware(['auth','role:coordinador'])->except(['scanQr','studentScanPage']);
+    }
+
+    public function index(Actividad $actividad)
+    {
+        $sesiones = $actividad->sesiones()->with('ponentes.docente.persona')->orderBy('start_at')->get();
+        return view('coordinador.sesiones.index', compact('actividad','sesiones'));
+    }
+
+    public function create(Actividad $actividad)
+    {
+        $docentes = \App\Models\Docente::with('persona')->get();
+        return view('coordinador.sesiones.create', compact('actividad','docentes'));
+    }
+
+    public function store(Request $request, Actividad $actividad)
+    {
+        $data = $request->validate([
+            'numero_sesion' => 'required|integer',
+            'tema' => 'nullable|string|max:255',
+            'start_at' => 'required|date',
+            'end_at' => 'nullable|date|after_or_equal:start_at',
+            'lugar' => 'nullable|string|max:255',
+            'duracion_minutos' => 'nullable|integer',
+            'ponentes' => 'array'
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $data['qr_token'] = Str::uuid();
+            $data['qr_expires_at'] = Carbon::parse($data['start_at'])->addHours(6);
+            $sesion = $actividad->sesiones()->create($data);
+
+            if (!empty($data['ponentes'])) {
+                foreach ($data['ponentes'] as $docenteId) {
+                    PonenteSesion::create([
+                        'sesion_id' => $sesion->id,
+                        'docente_id' => $docenteId,
+                        'rol' => 'ponente'
+                    ]);
+                }
+            }
+
+            DB::commit();
+            return redirect()->route('coordinador.sesiones.index', $actividad)->with('success','Sesión creada.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->withInput()->withErrors(['error' => $e->getMessage()]);
+        }
+    }
+
+    public function edit(Actividad $actividad, Sesion $sesion)
+    {
+        $docentes = \App\Models\Docente::with('persona')->get();
+        return view('coordinador.sesiones.edit', compact('actividad','sesion','docentes'));
+    }
+
+    public function update(Request $request, Actividad $actividad, Sesion $sesion)
+    {
+        $data = $request->validate([
+            'numero_sesion' => 'required|integer',
+            'tema' => 'nullable|string|max:255',
+            'start_at' => 'required|date',
+            'end_at' => 'nullable|date|after_or_equal:start_at',
+            'lugar' => 'nullable|string|max:255',
+            'duracion_minutos' => 'nullable|integer',
+            'ponentes' => 'array'
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $sesion->update($data);
+
+            if (isset($data['ponentes'])) {
+                // sincronización simple: eliminar y volver a crear
+                $sesion->ponentes()->delete();
+                foreach ($data['ponentes'] as $docenteId) {
+                    PonenteSesion::create(['sesion_id'=>$sesion->id,'docente_id'=>$docenteId,'rol'=>'ponente']);
+                }
+            }
+            DB::commit();
+            return redirect()->route('coordinador.sesiones.index', $actividad)->with('success','Sesión actualizada.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->withErrors(['error'=>$e->getMessage()]);
+        }
+    }
+
+    public function destroy(Actividad $actividad, Sesion $sesion)
+    {
+        $sesion->delete();
+        return back()->with('success','Sesión eliminada.');
+    }
+
+    // Endpoint que el estudiante usa para ver la página de escanear QR
+    public function studentScanPage(Sesion $sesion)
+    {
+        // vista para estudiante con QR scanner JS
+        return view('estudiante.scan', compact('sesion'));
+    }
+
+    // POST: escaneo por parte del estudiante o app móvil
+    public function scanQr(Request $request)
+    {
+        $request->validate([
+            'qr_token' => 'required|string',
+        ]);
+
+        $qr = $request->input('qr_token');
+        $sesion = Sesion::where('qr_token',$qr)->first();
+
+        if (! $sesion) {
+            return response()->json(['ok'=>false,'message'=>'QR inválido.'], 404);
+        }
+
+        // comprobar expiración
+        if ($sesion->qr_expires_at && now()->gt($sesion->qr_expires_at)) {
+            return response()->json(['ok'=>false,'message'=>'QR expirado.'], 400);
+        }
+
+        $persona = auth()->user()->persona ?? null;
+        if (! $persona) {
+            return response()->json(['ok'=>false,'message'=>'Debes iniciar sesión para registrar tu asistencia.'], 401);
+        }
+
+        // si ya existe asistencia para esta persona y sesion, devolver ok
+        $existe = Asistencia::where('sesion_id',$sesion->id)->where('persona_id',$persona->id)->first();
+        if ($existe) {
+            return response()->json(['ok'=>true,'message'=>'Asistencia ya registrada.']);
+        }
+
+        $as = Asistencia::create([
+            'sesion_id' => $sesion->id,
+            'persona_id' => $persona->id,
+            'fecha_hora' => now(),
+            'metodo' => 'qr',
+            'registrado_por' => $persona->id,
+            'minutes_attended' => $request->input('minutes_attended', null)
+        ]);
+
+        // opcional: broadcast event para actualizar listado en tiempo real
+        // event(new \App\Events\AsistenciaRegistrada($as));
+
+        return response()->json(['ok'=>true,'message'=>'Asistencia registrada.']);
+    }
+
+    // Exportar asistencias a Excel (docente o coordinador)
+    public function exportAsistencias(Sesion $sesion)
+    {
+        // requires maatwebsite/excel and an export class App\Exports\AsistenciasExport
+        return Excel::download(new AsistenciasExport($sesion->id), "asistencias_sesion_{$sesion->id}.xlsx");
+    }
+
+    // Regenerar QR
+    public function regenerarQr(Sesion $sesion)
+    {
+        $sesion->update(['qr_token' => Str::uuid(), 'qr_expires_at' => now()->addHours(6)]);
+        return back()->with('success','QR regenerado.');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Controllers\Controller;
+use App\Models\Tema;
+use App\Models\Actividad;
+use Illuminate\Http\Request;
+
+class TemaController extends Controller
+{
+    /**
+     * Guarda una nueva sesión (Tema) vinculada a una actividad.
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'id_actividad'     => 'required|exists:actividades,id_actividad',
+            'id_docente'       => 'required|exists:docentes,id', 
+            'tema_sesion'      => 'required|string|max:255',
+            'descripcion'      => 'nullable|string',
+            'numero_de_sesion' => 'required|integer|min:1',
+            'horario_inicio'   => 'required',
+            'horario_fin'      => 'required|after:horario_inicio',
+            'estado'           => 'required|in:espera,curso,finalizado'
+        ]);
+
+        // Se obtiene la actividad para heredar automáticamente su fecha de ejecución
+        $actividad = Actividad::findOrFail($request->id_actividad);
+
+        Tema::create([
+            'tema_sesion'      => $request->tema_sesion,
+            'descripcion'      => $request->descripcion,
+            'numero_de_sesion' => $request->numero_de_sesion,
+            'fecha'            => $actividad->fecha, // Hereda la fecha de la actividad
+            'horario_inicio'   => $request->horario_inicio,
+            'horario_fin'      => $request->horario_fin,
+            'estado'           => $request->estado,
+            'id_docente'       => $request->id_docente,
+            'id_actividad'     => $request->id_actividad
+        ]);
+
+        return redirect()->back()->with('success', 'La sesión ha sido vinculada correctamente.');
+    }
+
+    /**
+     * Actualiza una sesión existente.
+     */
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'id_actividad'     => 'required|exists:actividades,id_actividad',
+            'id_docente'       => 'required|exists:docentes,id',
+            'tema_sesion'      => 'required|string|max:255',
+            'descripcion'      => 'nullable|string',
+            'numero_de_sesion' => 'required|integer|min:1',
+            'horario_inicio'   => 'required',
+            'horario_fin'      => 'required|after:horario_inicio',
+            'estado'           => 'required|in:espera,curso,finalizado'
+        ]);
+
+        $tema = Tema::findOrFail($id);
+        $actividad = Actividad::findOrFail($request->id_actividad);
+
+        $tema->update([
+            'tema_sesion'      => $request->tema_sesion,
+            'descripcion'      => $request->descripcion,
+            'numero_de_sesion' => $request->numero_de_sesion,
+            'fecha'            => $actividad->fecha,
+            'horario_inicio'   => $request->horario_inicio,
+            'horario_fin'      => $request->horario_fin,
+            'estado'           => $request->estado,
+            'id_docente'       => $request->id_docente,
+            'id_actividad'     => $request->id_actividad
+        ]);
+
+        return redirect()->back()->with('success', 'La sesión ha sido actualizada correctamente.');
+    }
+
+    /**
+     * Elimina una sesión.
+     */
+    public function destroy($id)
+    {
+        $tema = Tema::findOrFail($id);
+        $tema->delete();
+
+        return redirect()->back()->with('success', 'La sesión ha sido eliminada correctamente.');
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\TipoDocumento;
+use Illuminate\Http\Request;
+
+class TipoDocumentoController extends Controller
+{
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'titulo' => 'required|string|max:255',
+            'descripcion' => 'nullable|string',
+            'estado' => 'required|boolean'
+        ]);
+
+        $tipo = TipoDocumento::create($data);
+        return response()->json(['success' => true, 'data' => $tipo]);
+    }
+}
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Trimestre;
+use App\Models\Planificacion;
+
+class TrimestreController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+    public function index() 
+    {
+        // Optimización: Carga previa de la relación para evitar consultas N+1 en la vista
+        $registros = Trimestre::with('planificacion')->get();
+        $planificaciones = Planificacion::all(); // Carga las opciones necesarias para los selectores de los modales
+        
+        return view('coordinador.entidades_crud_y_procesos.trimestre', compact('registros', 'planificaciones'));
+    }
+
+    /**
+     * Store a newly created trimester in storage.
+     */
+    public function store(Request $request)
+    {
+        $validatedData = $request->validate([
+            'nombre'           => 'required|string|max:255',
+            'fecha_inicio'     => 'required|date',
+            'fecha_fin'        => 'required|date|after_or_equal:fecha_inicio',
+            'id_planificacion' => 'required|exists:planificaciones,id_planificacion',
+        ]);
+
+        Trimestre::create($validatedData);
+
+        return redirect()->back()->with('success', 'Trimestre registrado correctamente.');
+    }
+
+    /**
+     * Update the specified trimester in storage.
+     */
+    public function update(Request $request, $id)
+    {
+        $validatedData = $request->validate([
+            'nombre'           => 'required|string|max:255',
+            'fecha_inicio'     => 'required|date',
+            'fecha_fin'        => 'required|date|after_or_equal:fecha_inicio',
+            'id_planificacion' => 'required|exists:planificaciones,id_planificacion',
+        ]);
+
+        $trimestre = Trimestre::findOrFail($id);
+        $trimestre->update($validatedData);
+
+        return redirect()->back()->with('success', 'Trimestre actualizado correctamente.');
+    }
+
+    /**
+     * Remove the specified trimester from storage.
+     */
+    public function destroy($id)
+    {
+        $trimestre = Trimestre::findOrFail($id);
+        $trimestre->delete();
+
+        return redirect()->back()->with('success', 'Trimestre eliminado correctamente.');
+    }
+}
+<?php
+
+namespace App\Http\Controllers\Auth;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\LoginRequest;
+use App\Traits\RedirectsByRole;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+class AuthenticatedSessionController extends Controller
+{
+    use RedirectsByRole;
+
+    /**
+     * Muestra el formulario de login.
+     */
+    public function create()
+    {
+        return view('auth.login');
+    }
+
+    /**
+     * Inicia sesión con un usuario ya validado por LoginRequest.
+     */
+    public function store(LoginRequest $request): RedirectResponse
+    {
+        $request->authenticate();
+        $request->session()->regenerate();
+
+        $usuario = Auth::user();
+
+        // Validar si el usuario fue desactivado por un Rector
+        if (!$usuario->activo) {
+            Auth::logout();
+            return back()->withErrors(['email' => 'Tu cuenta ha sido desactivada.']);
+        }
+
+        return redirect($this->redirectToDashboardByRole($usuario));
+    }
+
+    /**
+     * Cierra la sesión.
+     */
+    public function destroy(Request $request): RedirectResponse
+    {
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect('/');
+    }
+}
+<?php
+
+namespace App\Http\Controllers\Auth;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
+
+class ConfirmablePasswordController extends Controller
+{
+    /**
+     * Show the confirm password view.
+     */
+    public function show(): View
+    {
+        return view('auth.confirm-password');
+    }
+
+    /**
+     * Confirm the user's password.
+     */
+    public function store(Request $request): RedirectResponse
+    {
+        if (! Auth::guard('web')->validate([
+            'email' => $request->user()->email,
+            'password' => $request->password,
+        ])) {
+            throw ValidationException::withMessages([
+                'password' => __('auth.password'),
+            ]);
+        }
+
+        $request->session()->put('auth.password_confirmed_at', time());
+
+        return redirect()->intended(route('dashboard', absolute: false));
+    }
+}
+<?php
+
+namespace App\Http\Controllers\Auth;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+
+class EmailVerificationNotificationController extends Controller
+{
+    /**
+     * Send a new email verification notification.
+     */
+    public function store(Request $request): RedirectResponse
+    {
+        if ($request->user()->hasVerifiedEmail()) {
+            return redirect()->intended(route('dashboard', absolute: false));
+        }
+
+        $request->user()->sendEmailVerificationNotification();
+
+        return back()->with('status', 'verification-link-sent');
+    }
+}
+<?php
+
+namespace App\Http\Controllers\Auth;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+
+class EmailVerificationPromptController extends Controller
+{
+    /**
+     * Display the email verification prompt.
+     */
+    public function __invoke(Request $request): RedirectResponse|View
+    {
+        return $request->user()->hasVerifiedEmail()
+                    ? redirect()->intended(route('dashboard', absolute: false))
+                    : view('auth.verify-email');
+    }
+}
+<?php
+
+namespace App\Http\Controllers\Auth;
+
+use App\Http\Controllers\Controller;
+use App\Models\User;
+use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rules;
+use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
+
+class NewPasswordController extends Controller
+{
+    /**
+     * Display the password reset view.
+     */
+    public function create(Request $request): View
+    {
+        return view('auth.reset-password', ['request' => $request]);
+    }
+
+    /**
+     * Handle an incoming new password request.
+     *
+     * @throws ValidationException
+     */
+    public function store(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'token' => ['required'],
+            'email' => ['required', 'email'],
+            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+        ]);
+
+        // Here we will attempt to reset the user's password. If it is successful we
+        // will update the password on an actual user model and persist it to the
+        // database. Otherwise we will parse the error and return the response.
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function (User $user) use ($request) {
+                $user->forceFill([
+                    'password' => Hash::make($request->password),
+                    'remember_token' => Str::random(60),
+                ])->save();
+
+                event(new PasswordReset($user));
+            }
+        );
+
+        // If the password was successfully reset, we will redirect the user back to
+        // the application's home authenticated view. If there is an error we can
+        // redirect them back to where they came from with their error message.
+        return $status == Password::PASSWORD_RESET
+                    ? redirect()->route('login')->with('status', __($status))
+                    : back()->withInput($request->only('email'))
+                        ->withErrors(['email' => __($status)]);
+    }
+}
+<?php
+
+namespace App\Http\Controllers\Auth;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
+
+class PasswordController extends Controller
+{
+    /**
+     * Update the user's password.
+     */
+    public function update(Request $request): RedirectResponse
+    {
+        $validated = $request->validateWithBag('updatePassword', [
+            'current_password' => ['required', 'current_password'],
+            'password' => ['required', Password::defaults(), 'confirmed'],
+        ]);
+
+        $request->user()->update([
+            'password' => Hash::make($validated['password']),
+        ]);
+
+        return back()->with('status', 'password-updated');
+    }
+}
+<?php
+
+namespace App\Http\Controllers\Auth;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
+
+class PasswordResetLinkController extends Controller
+{
+    /**
+     * Display the password reset link request view.
+     */
+    public function create(): View
+    {
+        return view('auth.forgot-password');
+    }
+
+    /**
+     * Handle an incoming password reset link request.
+     *
+     * @throws ValidationException
+     */
+    public function store(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'email' => ['required', 'email'],
+        ]);
+
+        // We will send the password reset link to this user. Once we have attempted
+        // to send the link, we will examine the response then see the message we
+        // need to show to the user. Finally, we'll send out a proper response.
+        $status = Password::sendResetLink(
+            $request->only('email')
+        );
+
+        return $status == Password::RESET_LINK_SENT
+                    ? back()->with('status', __($status))
+                    : back()->withInput($request->only('email'))
+                        ->withErrors(['email' => __($status)]);
+    }
+}
+<?php
+
+namespace App\Http\Controllers\Auth;
+
+use App\Http\Controllers\Controller;
+use App\Models\Persona;
+use App\Models\Usuario;
+use App\Models\Role;
+use App\Models\Estudiante;
+use App\Models\Carrera;
+use App\Models\Profesion;
+use App\Models\ExpedienteEstudiante;
+use App\Models\SolicitudEmpleo;
+use App\Models\Curriculum;
+use App\Traits\RedirectsByRole;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rules;
+
+class RegisteredUserController extends Controller
+{
+    use RedirectsByRole;
+
+    public function create()
+    {
+         $profesiones = \App\Models\Profesion::where('estado', true)->orderBy('nombre')->get();
+    return view('auth.register', compact('profesiones'));
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'tipo_registro' => ['required', 'in:estudiante_externo,estudiante_regular,aspirante_empleo'],
+            'cedula' => ['required', 'string', 'max:20', 'unique:personas,cedula'],
+            'nombres' => ['required', 'string', 'max:255'],
+            'segundo_nombre' => ['nullable', 'string', 'max:255'],
+            'apellidos' => ['required', 'string', 'max:255'],
+            'segundo_apellido' => ['nullable', 'string', 'max:255'],
+            'telefono' => ['nullable', 'string', 'max:20'],
+            'sexo' => ['nullable', 'string', 'max:10'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:usuarios,email'],
+            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            // SE ELIMINÓ LA VALIDACIÓN DE USERNAME PORQUE NO EXISTE EN LA DB
+            'carrera' => ['required_if:tipo_registro,estudiante_regular', 'string', 'max:255'],
+            'profesion_id' => ['required_if:tipo_registro,aspirante_empleo', 'nullable', 'exists:profesiones,id'],
+            'identificacion_png' => ['nullable', 'image', 'max:2048'],
+            'cv_archivo' => ['nullable', 'mimes:pdf', 'max:5120'],
+        ]);
+
+        DB::beginTransaction();
+        try {
+            // 1. Crear Persona
+            $persona = Persona::create([
+                'cedula' => $request->cedula,
+                'nombres' => $request->nombres,
+                'segundo_nombre' => $request->segundo_nombre,
+                'apellidos' => $request->apellidos,
+                'segundo_apellido' => $request->segundo_apellido,
+                'telefono' => $request->telefono,
+                'sexo' => $request->sexo,
+            ]);
+
+            // Guardar imagen de cédula
+            if ($request->hasFile('identificacion_png')) {
+                $path = $request->file('identificacion_png')->store('identificaciones', 'public');
+                $persona->update(['cedula_imagen' => $path]);
+            }
+
+            // 2. Crear Usuario (SE ELIMINÓ EL CAMPO USERNAME)
+            $usuario = Usuario::create([
+                'persona_id' => $persona->id,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'activo' => true,
+            ]);
+
+            // 3. Asignación de roles según tipo de registro
+            if ($request->tipo_registro === 'estudiante_regular') {
+                $role = Role::where('nombre', 'estudiante')->first();
+                // Usamos firstOrCreate para la carrera
+                $carrera = Carrera::firstOrCreate(['nombre' => $request->carrera], ['estado' => 1]);
+
+                $estudiante = Estudiante::create([
+                    'persona_id' => $persona->id,
+                    'carrera_id' => $carrera->id,
+                    'es_regular' => true,
+                ]);
+
+                ExpedienteEstudiante::create([
+                    'estudiante_id' => $estudiante->id,
+                    'carrera_id' => $carrera->id,
+                ]);
+
+            } elseif ($request->tipo_registro === 'aspirante_empleo') {
+                $role = Role::where('nombre', 'publico')->first();
+
+                $cvPath = $request->hasFile('cv_archivo')
+                    ? $request->file('cv_archivo')->store('cvs', 'public')
+                    : null;
+
+                Curriculum::create([
+                    'persona_id' => $persona->id,
+                    'especialidad' => $request->especialidad,
+                    'archivo_cv' => $cvPath,
+                ]);
+
+                SolicitudEmpleo::create([
+                    'persona_id' => $persona->id,
+                    'estado' => 'pendiente',
+                ]);
+
+            } else { // estudiante_externo
+                $role = Role::where('nombre', 'publico')->first();
+            }
+
+            // Asignar el rol a la persona (Verifica que la relación roles() exista en Persona)
+            if ($role) {
+                $persona->roles()->attach($role->id, [
+                    'asignado_en' => now(),
+                    'activo' => true,
+                ]);
+            }
+
+            DB::commit();
+
+            // Login con el modelo Usuario creado
+            Auth::login($usuario);
+
+            return redirect($this->redirectToDashboardByRole($usuario));
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            // Esto te ayudará a ver qué falló exactamente si ocurre otro error
+            return back()->withInput()->withErrors(['error' => 'Error al registrar: ' . $e->getMessage()]);
+        }
+    }
+}
+<?php
+
+namespace App\Http\Controllers\Auth;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Auth\Events\Verified;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use Illuminate\Http\RedirectResponse;
+
+class VerifyEmailController extends Controller
+{
+    /**
+     * Mark the authenticated user's email address as verified.
+     */
+    public function __invoke(EmailVerificationRequest $request): RedirectResponse
+    {
+        if ($request->user()->hasVerifiedEmail()) {
+            return redirect()->intended(route('dashboard', absolute: false).'?verified=1');
+        }
+
+        if ($request->user()->markEmailAsVerified()) {
+            event(new Verified($request->user()));
+        }
+
+        return redirect()->intended(route('dashboard', absolute: false).'?verified=1');
+    }
+}
+<?php
+
+namespace App\Traits;
+
+trait RedirectsByRole
+{
+    public function redirectToDashboardByRole($usuario)
+    {
+        $persona = $usuario->persona;
+        $roles = $persona->roles->pluck('nombre')->map(fn($r) => strtolower($r))->toArray();
+
+        // Jerarquía de importancia para el primer inicio de sesión
+        $prioridad = ['rector', 'coordinador', 'docente', 'estudiante', 'publico'];
+
+        $roleSeleccionado = 'publico'; // Por defecto
+
+        foreach ($prioridad as $p) {
+            if (in_array($p, $roles)) {
+                $roleSeleccionado = $p;
+                break;
+            }
+        }
+
+        // Guardamos en sesión el rol que está usando actualmente
+        session(['role_activo' => $roleSeleccionado]);
+
+        return route($roleSeleccionado . '.dashboard');
+    }
+}
+

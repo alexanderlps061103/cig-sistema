@@ -1,0 +1,242 @@
+/* ==========================================================================
+   ESTILOS DE SESIONES Y COMPONENTES DINÁMICOS
+   ========================================================================== */
+
+/* Botón Crear Sesión */
+.btn-create-session {
+    background-color: var(--color-brand-green, #00a54f);
+    color: #ffffff;
+    border: none;
+    padding: var(--space-sm) var(--space-lg);
+    border-radius: var(--radius-md);
+    font-size: var(--text-base);
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    transition: background-color var(--transition-speed, 0.3s) ease;
+}
+
+.btn-create-session:hover {
+    background-color: #008740;
+}
+
+/* Caja Flotante Absoluta de Auto-completado */
+.custom-select-container {
+    position: relative;
+    width: 100%;
+}
+
+.custom-select-search-input {
+    width: 100%;
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: var(--text-base);
+    outline: none;
+    background-color: #ffffff;
+    transition: border-color var(--transition-speed) ease;
+}
+
+.custom-select-search-input:focus {
+    border-color: var(--color-brand-blue);
+}
+
+.custom-select-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: #ffffff;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    max-height: 180px;
+    overflow-y: auto;
+    z-index: 2500 !important; /* Capa por encima del modal */
+    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.15);
+    margin-top: var(--space-xs);
+    box-sizing: border-box;
+}
+
+.dropdown-item-option {
+    padding: var(--space-sm) var(--space-md);
+    cursor: pointer;
+    font-size: var(--text-sm);
+    color: var(--color-text-main);
+    border-bottom: 1px solid var(--color-border);
+    transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease;
+}
+
+.dropdown-item-option:last-child {
+    border-bottom: none;
+}
+
+.dropdown-item-option:hover {
+    background-color: var(--color-active-bg);
+    color: var(--color-text-active);
+}
+
+.dropdown-no-results {
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    text-align: center;
+}
+
+.activity-date-display {
+    background-color: var(--color-active-bg);
+    color: var(--color-brand-blue);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    margin-top: var(--space-xs);
+    border-left: 3px solid var(--color-brand-blue);
+}
+
+/* ==========================================================================
+   ESTRUCTURA DE TABLA CON GRIDS / FLEX
+   ========================================================================== */
+.activity-table-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 700;
+    padding: var(--space-sm) var(--space-lg);
+    background-color: var(--color-bg-body);
+    border-bottom: 2px solid var(--color-border);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+}
+
+.col-header-info { width: 45%; text-align: left; }
+.col-header-activity-actions { width: 20%; text-align: center; }
+.col-header-session-actions { width: 35%; text-align: left; padding-left: 1rem; }
+
+/* Filas de Actividades */
+.activity-row-item.data-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    padding: var(--space-df) var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+    gap: var(--space-lg);
+}
+
+.activity-info-col {
+    width: 45%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--space-xs);
+}
+
+.activity-row-description-meta {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    line-height: 1.4;
+    margin-top: 0.2rem;
+}
+
+.activity-actions-col {
+    width: 20%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.session-actions-col {
+    width: 35%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    justify-content: center;
+    border-left: 1px dashed var(--color-border);
+    padding-left: var(--space-df);
+}
+
+/* Tarjeta individual de sesiones */
+.session-action-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background-color: var(--color-hover-bg);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    gap: var(--space-sm);
+}
+
+.session-info-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.session-row-title {
+    font-weight: 700;
+    font-size: var(--text-sm);
+    color: var(--color-text-main);
+}
+
+.session-row-meta {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    line-height: 1.4;
+}
+
+.session-action-buttons {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.session-badge-status {
+    font-size: 1rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 0.4rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.session-status-espera { background-color: #fef3c7; color: #d97706; }
+.session-status-curso { background-color: #dcfce7; color: #16a34a; }
+.session-status-finalizado { background-color: #f3f4f6; color: #4b5563; }
+
+.no-sessions-placeholder {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    font-style: italic;
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.state-indicator-badge {
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    font-size: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-left: var(--space-sm);
+    display: inline-block;
+}
+
+@media (max-width: 992px) {
+    .activity-table-header-row {
+        display: none;
+    }
+    .activity-row-item.data-row {
+        flex-direction: column;
+        gap: var(--space-md);
+    }
+    .activity-info-col,
+    .activity-actions-col,
+    .session-actions-col {
+        width: 100% !important;
+        border-left: none;
+        padding-left: 0;
+    }
+}

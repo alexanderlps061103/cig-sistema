@@ -1,0 +1,68 @@
+vamos a corregir este formulario necestiot que la estrructura sea esta
+<div class="form-group mb-4">
+                            <label class="small ps-3 text-muted">¿Cómo deseas registrarte en el sistema?</label>
+                            <select name="tipo_registro" id="tipo_registro" class="form-select form-control rounded-pill ps-3" style="height: calc(1.5em + .75rem + 15px);" required>
+                                <option value="estudiante_regular" selected>Estudiante Regular (UNEY)</option>
+                                <option value="estudiante_externo">Participante Externo (Público General)</option>
+                                <option value="aspirante_empleo">Aspirante a Empleo (Docente o Personal CIG)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-sm-6 mb-3 mb-sm-0">
+                                <input type="text" class="form-control rounded-pill" name="cedula" value="{{ old('cedula') }}" placeholder="Cédula de Identidad" required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-sm-6 mb-3 mb-sm-0">
+                                <input type="text" class="form-control rounded-pill" name="nombres" value="{{ old('nombres') }}" placeholder="Nombres" required>
+                            </div>
+                            <div class="col-sm-6">
+                                <input type="text" class="form-control rounded-pill" name="apellidos" value="{{ old('apellidos') }}" placeholder="Apellidos" required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-sm-6">
+                                <input type="email" class="form-control rounded-pill" name="email" value="{{ old('email') }}" placeholder="Correo Electrónico" required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-sm-6 mb-3 mb-sm-0">
+                                <select name="sexo" class="form-select form-control rounded-pill ps-3 text-muted" style="height: calc(1.5em + .75rem + 15px);">
+                                    <option value="" disabled selected>Sexo</option>
+                                    <option value="M" {{ old('sexo') == 'M' ? 'selected' : '' }}>Masculino</option>
+                                    <option value="F" {{ old('sexo') == 'F' ? 'selected' : '' }}>Femenino</option>
+                                </select>
+                            </div>
+                            <div class="col-sm-6">
+                                <input type="text" class="form-control rounded-pill" name="telefono" value="{{ old('telefono') }}" placeholder="Teléfono de Contacto (Opcional)">
+                            </div>
+                        </div>
+                        ya aqui dependiendo del estatus del usuario
+                        si escoge docente 
+                        que aparezca esto
+                        <div id="seccion_aspirante_empleo" style="display: none;">
+                            <div class="form-group mb-3">
+                                <input type="text" class="form-control rounded-pill" name="especialidad" id="especialidad" value="{{ old('especialidad') }}" placeholder="Área de Especialidad Principal">
+                            </div>
+                            <div class="form-group mb-3">
+                                <textarea class="form-control rounded" name="experiencia" id="experiencia" rows="3" placeholder="Describe brevemente tu experiencia laboral o docente" style="border-radius: 15px; padding: 15px;"></textarea>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label class="small ps-3 text-muted">Cargar Currículum Vitae (Formato PDF únicamente)</label>
+                                <input type="file" class="form-control rounded-pill" name="cv_archivo" id="cv_archivo" accept=".pdf" style="height: auto; padding: 10px 20px;">
+                            </div>
+                        </div>
+                        aquí agrefa input nombre de usuario a este div
+                        <div class="row mb-4">
+                            <div class="col-sm-6 mb-3 mb-sm-0">
+                                <input type="password" class="form-control rounded-pill" name="password" placeholder="Contraseña" required>
+                            </div>
+                            <div class="col-sm-6">
+                                <input type="password" class="form-control rounded-pill" name="password_confirmation" placeholder="Repetir Contraseña" required>
+                            </div>
+                        </div>
+                        las clase corrige los nombre y que estos nombre sean referencia a registrar el usuario segun esatus

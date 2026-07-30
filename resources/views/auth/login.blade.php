@@ -1,47 +1,79 @@
-<x-guest-layout>
-    <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
+@extends('layouts.app')
 
-    <form method="POST" action="{{ route('login') }}">
-        @csrf
+@section('title', 'Inicio de Sesión')
 
-        <!-- Email Address -->
-        <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('assets/css/auth/login.css') }}">
+@endpush
+
+@section('content')
+{{-- El contenedor login-container ahora se encarga de todo el centrado y el fondo --}}
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-row">
+            <!-- Columna Logo -->
+            <div class="login-logo-col">
+                <img src="{{ asset('assets/images/logo_cig.svg') }}" alt="Logo SIACSACIG" class="login-logo-img">
+            </div>
+
+            <!-- Columna Formulario -->
+            <div class="login-form-col">
+                <div class="login-form-wrapper">
+                    <div class="login-header">
+                        <h1 class="login-title">¡Bienvenido!</h1>
+                        <p style="text-align: center; color: var(--color-text-muted); margin-bottom: 2rem;">Inicia sesión en SIACSACIG</p>
+                    </div>
+
+                    @if(session('success'))
+                        <div class="alert alert-success" style="background:#dcfce7; color:#166534; padding:10px; border-radius:8px; margin-bottom:15px; text-align:center;">
+                            {{ session('success') }}
+                        </div>
+                    @endif
+
+                    @if($errors->any())
+                        <div class="alert alert-danger" style="background:#fee2e2; color:#b91c1c; padding:10px; border-radius:8px; margin-bottom:15px; text-align:center; font-size:0.9rem;">
+                            @foreach($errors->all() as $error)
+                                {{ $error }}<br>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    <form class="login-form" method="POST" action="{{ route('login') }}">
+                        @csrf
+                        <div class="form-group-custom">
+                            <input type="email" class="form-input-custom"
+                                name="email" id="email" value="{{ old('email') }}"
+                                placeholder="Correo Electrónico" required autocomplete="email" autofocus>
+                        </div>
+
+                        <div class="form-group-custom">
+                            <input type="password" class="form-input-custom"
+                                name="password" id="password"
+                                placeholder="Contraseña" required autocomplete="current-password">
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="remember" id="remember" {{ old('remember') ? 'checked' : '' }}>
+                                <label class="form-check-label small" for="remember">Recordarme</label>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="submit-login" class="btn-submit-custom">
+                            INGRESAR
+                        </button>
+                    </form>
+
+                    <div class="login-footer" style="margin-top: 2rem; text-align: center; border-top: 1px solid #eee; padding-top: 1.5rem;">
+                        <a class="login-link" href="{{ route('register') }}">¿No tienes cuenta? Regístrate aquí</a>
+                    </div>
+                </div>
+            </div>
         </div>
+    </div>
+</div>
+@endsection
 
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
-
-            <x-text-input id="password" class="block mt-1 w-full"
-                            type="password"
-                            name="password"
-                            required autocomplete="current-password" />
-
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
-        </div>
-
-        <!-- Remember Me -->
-        <div class="block mt-4">
-            <label for="remember_me" class="inline-flex items-center">
-                <input id="remember_me" type="checkbox" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" name="remember">
-                <span class="ms-2 text-sm text-gray-600">{{ __('Remember me') }}</span>
-            </label>
-        </div>
-
-        <div class="flex items-center justify-end mt-4">
-            @if (Route::has('password.request'))
-                <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}">
-                    {{ __('Forgot your password?') }}
-                </a>
-            @endif
-
-            <x-primary-button class="ms-3">
-                {{ __('Log in') }}
-            </x-primary-button>
-        </div>
-    </form>
-</x-guest-layout>
+@push('scripts')
+    <script src="{{ asset('assets/js/auth/login.js') }}"></script>
+@endpush

@@ -2,14 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Curriculum extends Model
 {
-    use HasFactory;
-
     protected $table = 'curriculums';
 
     protected $fillable = [
@@ -17,11 +14,15 @@ class Curriculum extends Model
         'especialidad',
         'experiencia',
         'archivo_cv',
-        'notas_internas',
+        'notas_internas'
+    ];
+
+    protected $casts = [
+        // no hay timestamps especiales por ahora
     ];
 
     public function persona(): BelongsTo
     {
-        return $this->belongsTo(Persona::class);
+        return $this->belongsTo(Persona::class, 'persona_id');
     }
 }

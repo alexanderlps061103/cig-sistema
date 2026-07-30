@@ -2,15 +2,12 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PreguntaEncuesta extends Model
 {
-    use HasFactory;
-
     protected $table = 'preguntas_encuesta';
 
     protected $fillable = [
@@ -18,16 +15,16 @@ class PreguntaEncuesta extends Model
         'texto',
         'tipo',
         'opciones',
-        'orden',
+        'orden'
     ];
 
     protected $casts = [
-        'opciones' => 'json',
+        'opciones' => 'array',
     ];
 
     public function encuesta(): BelongsTo
     {
-        return $this->belongsTo(Encuesta::class);
+        return $this->belongsTo(Encuesta::class, 'encuesta_id');
     }
 
     public function respuestas(): HasMany

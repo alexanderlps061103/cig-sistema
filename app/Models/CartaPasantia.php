@@ -2,31 +2,27 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class CartaPasantia extends Model
 {
     use HasFactory;
 
     protected $table = 'cartas_pasantia';
-
     protected $fillable = [
         'estudiante_id',
         'tipo',
         'institucion_destino',
         'fecha_emision',
         'archivo',
-        'estado',
+        'estado'
     ];
 
-    protected $casts = [
-        'fecha_emision' => 'date',
-    ];
+    protected $casts = ['fecha_emision' => 'date'];
 
-    public function estudiante(): BelongsTo
+    public function estudiante()
     {
-        return $this->belongsTo(Persona::class, 'estudiante_id');
+        return $this->belongsTo(Estudiante::class, 'estudiante_id');
     }
 }

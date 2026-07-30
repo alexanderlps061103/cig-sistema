@@ -1,0 +1,32 @@
+Prompt para corrección de archivos Blade:
+Actúa como un desarrollador experto en Laravel. Necesito que adaptes el código de mi archivo .blade.php actual para que sea compatible con nuestra nueva plantilla base (layouts.app).
+Especificaciones de la Plantilla Base:
+Usa @yield('title') para definir el título de la pestaña.
+Usa @stack('styles') (antes de cerrar el </head>) para hojas de estilo específicas de cada página.
+Usa @yield('content') para el cuerpo principal de la vista (el layout base ya maneja las etiquetas <html>, <body>, el menú lateral, la barra superior y los contenedores .main-content o .auth-wrapper de forma automática según la autenticación del usuario).
+Usa @stack('scripts') (antes de cerrar el </body>) para los scripts JS específicos de cada página.
+Instrucciones para la conversión:
+Adapte el código a la siguiente estructura limpia:
+code
+Blade
+@extends('layouts.app')
+
+@section('title', '[Título adecuado según el propósito de la página]')
+
+@push('styles')
+    {{-- Estilos específicos de esta vista si los hay (etiquetas <link> o <style>) --}}
+@endpush
+
+@section('content')
+    {{-- El contenido HTML principal de la vista --}}
+@endsection
+
+@push('scripts')
+    {{-- Scripts específicos de esta vista si los hay (etiquetas <script>) --}}
+@endpush
+Extraiga cualquier archivo CSS (<link>) o código <style> que encuentre en el archivo original y colóquelo dentro de @push('styles').
+Extraiga cualquier archivo JS (<script src="...">) o código <script> que encuentre en el archivo original y colóquelo dentro de @push('scripts').
+Elimine del código original cualquier estructura repetitiva que el layout base ya proporcione de forma global (como declaraciones de <html>, <head>, <body>, barras laterales, menús móviles o cabeceras de escritorio duplicadas).
+Devuelva únicamente el código limpio resultante listo para ser copiado y pegado en la vista correspondiente.
+Aquí está mi código original a corregir:
+[PEGA TU CÓDIGO AQUÍ]

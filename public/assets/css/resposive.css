@@ -1,0 +1,87 @@
+/* ==========================================================================
+   ESTILOS POR DEFECTO (PC DE ESCRITORIO GRANDE)
+   Pantallas de 1440px en adelante (>= 120rem)
+   ========================================================================== */
+body {
+    /* Aquí escribe el CSS para monitores grandes de escritorio */
+}
+
+
+/* ==========================================================================
+   1. LAPTOPS / PORTÁTILES (max-width: 1440px)
+   Equivalencia con 1rem = 12px: @media (max-width: 120rem)
+   ========================================================================== */
+@media (max-width: 1440px) {
+    /* Ajustes para portátiles estándar de 13" a 15.6" */
+}
+
+
+/* ==========================================================================
+   2. MINI-LAPTOPS / TABLETS HORIZONTAL (max-width: 1200px)
+   Equivalencia con 1rem = 12px: @media (max-width: 100rem)
+   ========================================================================== */
+@media (max-width: 1200px) {
+    /* Ajustes para netbooks, Chromebooks o iPads de lado */
+}
+
+
+/* ==========================================================================
+   3. TABLETS VERTICAL (max-width: 768px)
+   Equivalencia con 1rem = 12px: @media (max-width: 64rem)
+   ========================================================================== */
+@media (max-width: 768px) {
+    /* Ajustes para tablets estándar en posición vertical */
+}
+
+
+/* ==========================================================================
+   4. TELÉFONOS MÓVILES (max-width: 480px)
+   Equivalencia con 1rem = 12px: @media (max-width: 40rem)
+   ========================================================================== */
+@media (max-width: 480px) {
+    /* Ajustes para smartphones o teléfonos en posición vertical */
+}
+
+/* ==========================================================================
+   ESTILOS POR DEFECTO (TELÉFONOS MÓVILES)
+   Pantallas desde 0px hasta 767px (0rem a 63.9rem)
+   ========================================================================== */
+body {
+    /* Aquí escribe el CSS base para smartphones */
+}
+
+
+/* ==========================================================================
+   1. TABLETS VERTICAL (min-width: 768px)
+   Equivalencia con 1rem = 12px: @media (min-width: 64rem)
+   ========================================================================== */
+@media (min-width: 768px) {
+    /* Estilos que se añaden cuando la pantalla es del tamaño de una tablet */
+}
+
+
+/* ==========================================================================
+   2. MINI-LAPTOPS / TABLETS HORIZONTAL (min-width: 1200px)
+   Equivalencia con 1rem = 12px: @media (min-width: 100rem)
+   ========================================================================== */
+@media (min-width: 1200px) {
+    /* Estilos para Chromebooks, netbooks o pantallas medianas */
+}
+
+
+/* ==========================================================================
+   3. LAPTOPS / PORTÁTILES (min-width: 1440px)
+   Equivalencia con 1rem = 12px: @media (min-width: 120rem)
+   ========================================================================== */
+@media (min-width: 1440px) {
+    /* Estilos para portátiles estándar */
+}
+
+
+/* ==========================================================================
+   4. PC DE ESCRITORIO GRANDE (min-width: 1600px)
+   Equivalencia con 1rem = 12px: @media (min-width: 133.3rem)
+   ========================================================================== */
+@media (min-width: 1600px) {
+    /* Ajustes finos para monitores de alta resolución o iMacs */
+}

@@ -4,40 +4,55 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Support\Facades\Auth;
+use App\Models\SolicitudInduccion;
 
 class CheckAprobado
 {
-    public function handle(Request $request, Closure $next): Response
+    /**
+     * Verifica que el estudiante tenga la inducción aprobada.
+     *
+     * @param  string|null  $redirectTo  Ruta a la que redirigir si no cumple
+     */
+    public function handle(Request $request, Closure $next, ?string $redirectTo = null, string $errorMessage = 'Debes completar y aprobar la inducción antes de acceder.')
     {
-        // 1. Verificar si está logueado
-        if (!auth()->check()) {
-            return redirect('login');
+        if (!Auth::check()) {
+            return redirect()->route('login');
         }
 
-        $user = auth()->user();
+        $user = Auth::user();
+        $persona = $user->persona;
 
-        // 2. Si es Coordinador (Admin), acceso total
-        if ($user->roles()->where('nombre', 'coordinador')->exists()) {
+        if (!$persona) {
+            Auth::logout();
+            return redirect()->route('login')->withErrors(['email' => 'Usuario sin datos personales.']);
+        }
+
+        // Rector y Coordinador: acceso total
+        if ($persona->roles()->whereIn('nombre', ['rector', 'coordinador'])->exists()) {
             return $next($request);
         }
 
-        // 3. Si es Estudiante, verificar si ya aprobó la inducción
-        if ($user->roles()->where('nombre', 'estudiante')->exists()) {
-            // Buscar una solicitud aprobada que tenga una inducción aprobada
-            $aprobado = \App\Models\SolicitudInduccion::where('estudiante_id', $user->id)
-                ->where('estado', 'aprobada')
-                ->whereHas('inducciones', function ($query) {
-                    $query->where('aprobada', true);
-                })->exists();
+        // Estudiante: debe tener solicitud de inducción aprobada
+        if ($persona->roles()->where('nombre', 'estudiante')->exists()) {
+            $estudiante = $persona->estudiante;
 
-            if (!$aprobado) {
-                return redirect()->route('estudiante.dashboard')
-                    ->with('error', 'Debes completar y aprobar el curso de inducción antes de acceder a las pasantías.');
+            if (!$estudiante) {
+                return redirect()->route($redirectTo ?? 'estudiante.dashboard')
+                    ->with('error', 'Perfil de estudiante no encontrado. Contacta al administrador.');
+            }
+
+            $tieneAprobada = SolicitudInduccion::where('estudiante_id', $estudiante->id)
+                ->where('estado', 'aprobada')
+                ->exists();
+
+            if (!$tieneAprobada) {
+                return redirect()->route($redirectTo ?? 'estudiante.dashboard')
+                    ->with('error', $errorMessage);
             }
         }
 
-        // Si no es estudiante ni coordinador (ej. docente sin permiso), podrías denegar
+        // Docente, público u otros: continúan sin restricción
         return $next($request);
     }
 }

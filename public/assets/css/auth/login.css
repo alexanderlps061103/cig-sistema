@@ -1,0 +1,105 @@
+/* Limpiamos estilos previos */
+.auth-wrapper {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Imagen de fondo */
+    background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),
+                url('/assets/images/fondo-login.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
+.login-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.login-card {
+    background: #ffffff;
+    border-radius: 1.5rem;
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    max-width: 900px;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+.login-row {
+    display: flex;
+    width: 100%;
+}
+
+.login-logo-col {
+    flex: 1;
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+}
+
+.login-logo-img {
+    width: 100%;
+    max-width: 250px;
+}
+
+.login-form-col {
+    flex: 1.2;
+    padding: 50px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.login-title {
+    font-size: 1.8rem;
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 2rem;
+    color: #1e293b;
+}
+
+.form-input-custom {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f1f5f9;
+    text-align: center;
+}
+
+.btn-submit-custom {
+    width: 100%;
+    padding: 12px;
+    background: #23378c;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.btn-submit-custom:hover {
+    background: #1a2a6c;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .login-card {
+        flex-direction: column;
+    }
+    .login-logo-col {
+        display: none; /* Ocultar logo en móvil para ahorrar espacio */
+    }
+}

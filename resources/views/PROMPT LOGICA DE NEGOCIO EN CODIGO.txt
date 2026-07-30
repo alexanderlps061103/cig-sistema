@@ -1,0 +1,69 @@
+Actúa como un Desarrollador Full-Stack Senior con experiencia en Laravel. Necesito que generes la estructura completa (Backend y Frontend) para un módulo CRUD basándote en las instrucciones, reglas de negocio y el código que te proporcionaré al final.
+
+La validación de datos y el control de los mensajes de error/éxito deben ser manejados estrictamente por Laravel en el backend. El frontend (JS) solo se encargará de asistir visualmente al usuario (coloreando bordes) y animar los mensajes que Laravel genere. 
+
+PROHIBICIÓN ESTRICTA: Queda totalmente prohibido el uso de la función `alert()` del navegador en JavaScript y el uso de `e.preventDefault()` en los eventos submit para bloquear el envío. El formulario debe enviarse siempre para que Laravel sea quien valide, rechace y retorne las fallas.
+
+Por favor, genera código limpio, modular, listo para copiar y pegar, estructurado en los siguientes archivos:
+1. Migración de Base de Datos
+2. Modelo Laravel (Eloquent)
+3. Controlador Laravel (Validación formal de datos y manejo de alertas de sesión)
+4. Archivo de Rutas (web.php)
+5. Vista Blade (Estructura HTML con directivas de Laravel para errores y alertas, sin atributos 'required')
+6. Estilos CSS (Modales, alertas flotantes absolutas que no muevan el HTML, y clases de validación)
+7. Archivo JavaScript (Gestión de modales, asistencia visual de colores sin bloqueo de submit, filtros y desvanecimiento de alertas)
+
+---
+
+### INSTRUCCIONES Y REQUERIMIENTOS TÉCNICOS
+
+#### A. BACKEND (LARAVEL - Autoridad de Validación y Mensajes)
+1. **Migración**: Tabla de la entidad con ID, 'nombre', 'descripcion' (opcional), 'estado' (activo/inactivo o similar) y timestamps.
+2. **Modelo**: Configurar campos `$fillable`.
+3. **Controlador**:
+   - `store()` y `update()`: Deben validar los datos formalmente usando `$request->validate()` o un FormRequest. Si la validación falla, Laravel debe redirigir atrás con los errores y los datos anteriores (`withInput()`). Si tiene éxito, debe guardar/actualizar y redirigir con un mensaje de éxito en la sesión (`session()->flash('success', '...')`).
+   - `destroy()`: Debe cambiar el estado del registro a inactivo (eliminación lógica) y redirigir con un mensaje de éxito en la sesión.
+
+#### B. FRONTEND (BLADE, CSS, JS)
+
+1. **VISTA BLADE (`index.blade.php`)**:
+   - **Campos limpios**: Ningún campo `input`, `textarea` o `select` de los formularios debe tener el atributo `required`.
+   - **Gestión de Alertas de Laravel**: Renderizar los mensajes de éxito o error que Laravel envía en la sesión usando directivas `@if (session('success'))` o `@if ($errors->any())`, envolviéndolos en contenedores con la clase `.alert-message`.
+   - **Mensajes de validación de campos**: Abajo de cada input, usar la directiva `@error('campo')` de Laravel para mostrar el mensaje de error exacto devuelto por el servidor y aplicar la clase CSS de error en el input si Laravel detecta fallas.
+   - Usar la función de Laravel `old('campo')` en los inputs para que no se borre lo que el usuario escribió si la validación falla.
+   - Configurar la tabla de datos donde cada fila (`.data-row`) tenga los atributos personalizados: `data-nombre`, `data-descripcion`, `data-estado` para filtrado en JS.
+
+2. **ESTILOS CSS**:
+   - **Alertas flotantes**: Las alertas de éxito y error deben estar en un contenedor fijo (`position: fixed` o `absolute`) de modo que aparezcan flotando en pantalla y NO muevan ni alteren la estructura visual ni el flujo del HTML principal.
+   - Clases de validación visual del input: `.val-red`, `.val-yellow`, `.val-green`.
+   - Estilos para modales activos/inactivos (`.active`).
+   - Animación de desvanecimiento (fade-out) y desplazamiento de las alertas.
+
+3. **JS - ARCHIVO DE JAVASCRIPT (Vanilla JS bajo DOMContentLoaded)**:
+   - **Módulo 1: Gestión de Modales**: 
+     * Apertura y cierre de modales con la clase '.active'.
+     * Cierre seguro al hacer clic fuera del modal (en el overlay).
+     * Funciones globales `openEditModal` y `openDeleteModal` para actualizar dinámicamente el `action` del formulario con la URL de Laravel e inyectar datos del registro seleccionado en los inputs.
+   - **Módulo 2: Asistencia de Validación Visual en tiempo real (No limitativa)**:
+     * Aplicar clases de color en base al valor escrito: 'red' (vacío o caracteres especiales inválidos: solo permitir letras, números, espacios y `.,()\-#`), 'yellow' (menos de 3 caracteres), y 'green' (válido).
+     * Nota: Esta validación es de asistencia. No se debe usar `e.preventDefault()` ni `alert()`. Si el usuario hace clic en el botón de enviar, el formulario debe enviarse de inmediato.
+   - **Módulo 3: Filtrado y Búsqueda Dinámica**:
+     * Filtrar en tiempo real las filas de la tabla `.data-row` según el buscador de texto y el select de estado. Mostrar `#no-results-row` si no hay coincidencias.
+   - **Módulo 4: Desvanecimiento de Alertas**:
+     * Detectar los elementos `.alert-message` (generados por Laravel) y, tras 4 segundos, aplicarles un efecto de fade-out suave (opacidad y traslado vertical de -15px en 0.6s) y luego removerlos del DOM.
+
+   *Nota de seguridad en JS*: Validar que cada elemento exista antes de asignarle oyentes de eventos (`addEventListener`) para evitar errores en la consola.
+
+---
+
+### CÓDIGO DE REFERENCIA O DETALLES DEL CONTENIDO
+
+Antes de generar los archivos, analiza el contenido que proporcionaré a continuación y determina bajo cuál de los siguientes escenarios debes actuar:
+
+1. **¿El código proporcionado es de referencia para crear una NUEVA entidad?**
+   - **SÍ (Caso Nuevo):** Utiliza la información o descripción para generar la estructura completa de los 7 archivos desde cero para esta nueva entidad.
+   - **NO (Caso Refactorización):** Si el código no describe una entidad nueva sino que es un código existente (HTML, JS, CSS, etc.), asume que este es el código base del proyecto. Debes aplicar todas las instrucciones de HTML (Blade), JS (módulos 1 al 4) y CSS directamente sobre este código para adaptarlo y mejorarlo. Además, genera la migración, modelo y controlador de Laravel garantizando que queden perfectamente vinculados y coherentes con dicho código base.
+
+DEFINE TU RESPUESTA [SI / NO]:
+
+[PEGA TU CODIGO AQUÍ]

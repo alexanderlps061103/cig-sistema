@@ -1,0 +1,101 @@
+/* ==========================================================================
+   RESET BÁSICO Y REGLAS DE CONFIGURACIÓN GLOBAL
+   ========================================================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    outline: none;
+}
+
+/* 
+   Configuración de la Raíz (Escalabilidad del Sistema)
+   - Por defecto (pantallas medianas <= 1366px): 62.5% -> 1rem = 10px
+   - Pantallas grandes (>= 1367px): 68.75% -> 1rem = 11px
+*/
+html {
+    font-size: 62.5%;
+    scroll-behavior: smooth;
+    transition: font-size 0.2s ease;
+}
+
+@media (min-width: 1367px) {
+    html {
+        font-size: 68.75%; 
+    }
+}
+
+:root {
+    /* --- PALETA DE COLORES (Tu marca) --- */
+    --color-brand-blue: #23378c;     
+    --color-brand-green: #00a54f;    
+    --color-brand-cyan: #009fe3;     
+    --color-brand-magenta: #e3007b;  
+
+    /* --- VARIABLES DE INTERFAZ --- */
+    --color-bg-body: #f8fafc;
+    --color-bg-sidebar: #ffffff;
+    --color-border: #e2e8f0;
+    
+    --color-text-main: #0f172a;
+    --color-text-muted: #64748b;
+    --color-text-active: var(--color-brand-blue); 
+    --color-badge-bg: var(--color-brand-blue);
+    --color-active-bg: #eff6ff; 
+    --color-hover-bg: #f8fafc;
+    --color-badge-text: #ffffff;
+    --color-danger-hover: #fef2f2;
+    --color-danger-text: #ef4444;
+
+    --color-event-taller: var(--color-brand-blue);   
+    --color-event-foro: var(--color-brand-green);     
+    --color-event-charla: var(--color-brand-magenta);   
+    
+    --transition-speed: 0.3s;
+    --submenu-transition-speed: 0.3s;
+    
+    --sidebar-width-expanded: 260px; 
+    --sidebar-width-collapsed: 78px;
+
+    /* ==========================================================================
+       ESCALA TIPOGRÁFICA UNIFORME (La clave para la consistencia)
+       ========================================================================== */
+    --text-xs: 1.1rem;    /* 11px - Textos muy pequeños (ej. códigos de salones, notas al pie) */
+    --text-sm: 1.3rem;    /* 13px - Texto secundario (ej. submenús, encabezados de tabla, placeholders) */
+    --text-base: 1.4rem;  /* 14px - Texto del cuerpo, inputs, botones, celdas de tabla */
+    --text-md: 1.6rem;    /* 16px - Títulos de tarjetas, etiquetas de campos del formulario */
+    --text-lg: 1.8rem;    /* 18px - Subtítulos principales, títulos de modales */
+    --text-xl: 2.2rem;    /* 22px - Títulos grandes de páginas (ej. "Gestión de Salones") */
+    --text-xxl: 2.8rem;   /* 28px - Números grandes en widgets/indicadores */
+
+    /* ==========================================================================
+       ESCALA DE ESPACIADO UNIFORME (Paddings y Margins consistentes)
+       ========================================================================== */
+    --space-xs: 0.4rem;   /* 4px */
+    --space-sm: 0.8rem;   /* 8px */
+    --space-md: 1.2rem;   /* 12px */
+    --space-df: 1.6rem;   /* 16px - Espaciado estándar (Default) */
+    --space-lg: 2.4rem;   /* 24px */
+    --space-xl: 3.2rem;   /* 32px */
+
+    /* ==========================================================================
+       ESCALA DE BORDES REDONDEADOS
+       ========================================================================== */
+    --radius-sm: 0.4rem;  /* 4px - Botones pequeños, badges */
+    --radius-md: 0.8rem;  /* 8px - Inputs, botones estándar, tarjetas pequeñas */
+    --radius-lg: 1.2rem;  /* 12px - Tarjetas principales, modales, contenedores */
+}
+
+/* ==========================================================================
+   ESTRUCTURA BASE DEL BODY
+   ========================================================================== */
+body {
+    background-color: var(--color-bg-body);
+    display: flex;
+    min-height: 100vh;
+    color: var(--color-text-main);
+    overflow-x: hidden;
+    font-size: var(--text-base); /* El cuerpo de texto hereda por defecto los 1.4rem */
+    line-height: 1.5;
+}

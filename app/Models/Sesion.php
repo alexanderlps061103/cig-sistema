@@ -2,48 +2,48 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Sesion extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'sesiones';
-
     protected $fillable = [
         'actividad_id',
         'numero_sesion',
-        'tema',
-        'fecha',
-        'hora_inicio',
-        'hora_fin',
-        'lugar',
+        'tema','start_at',
+        'end_at','lugar',
+        'duracion_minutos',
+        'qr_token',
+        'qr_expires_at'
     ];
 
     protected $casts = [
-        'fecha' => 'date',
-        'hora_inicio' => 'datetime',
-        'hora_fin' => 'datetime',
+        'start_at' => 'datetime',
+        'end_at' => 'datetime',
+        'qr_expires_at' => 'datetime',
     ];
 
-    public function actividad(): BelongsTo
+    public function actividad()
     {
-        return $this->belongsTo(Actividad::class);
+        return $this->belongsTo(Actividad::class, 'actividad_id');
     }
 
-    public function ponentes(): BelongsToMany
+    public function ponentes()
     {
-        return $this->belongsToMany(Persona::class, 'ponente_sesion')
-                    ->using(PonenteSesion::class)
-                    ->withPivot('rol');
+        return $this->hasMany(PonenteSesion::class, 'sesion_id');
     }
 
-    public function asistencias(): HasMany
+    public function asistencias()
     {
-        return $this->hasMany(Asistencia::class);
+        return $this->hasMany(Asistencia::class, 'sesion_id');
+    }
+
+    public function certificados()
+    {
+        return $this->hasMany(Certificado::class, 'sesion_id');
     }
 }

@@ -1,0 +1,257 @@
+Documentación de Solución: Acople y Fluidez de Menú Lateral en Laravel
+1. El Origen del Problema
+Anteriormente, el menú lateral (#sidebar) utilizaba position: fixed en pantallas de escritorio. Al "flotar" fuera del flujo normal de la página, obligaba a calcular márgenes matemáticos manuales (margin-left) en las vistas internas. Esto provocaba que, al colapsar el menú o cambiar de pantalla, el contenido y la barra superior (.top-header) se solaparan o dejaran espacios en blanco.
+2. La Solución Aplicada
+Se reestructuró el diseño para aprovechar la propiedad display: flex nativa del body. Al cambiar el menú lateral a position: sticky en escritorio, este ocupa un espacio físico real. Cuando el menú cambia de ancho (de 260px a 78px), el contenedor de contenido (.main-wrapper) se expande o contrae de forma automática y fluida sin necesidad de recalcular márgenes en cada CSS.
+3. Archivos Modificados y Código a Copiar
+Archivo A: app.blade.php (Plantilla Base del Sistema)
+Asegúrate de que la estructura estructural y el renderizado de scripts estén definidos así:
+code
+Html
+<!doctype html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>@yield('title', config('app.name'))</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Estilos comunes -->
+    <link rel="stylesheet" href="{{ asset('assets/css/styleBase.css') }}">
+    <!-- Menú lateral + barra superior -->
+    <link rel="stylesheet" href="{{ asset('assets/css/menu/menu.css') }}">
+    @stack('styles')
+</head>
+<body class="@auth has-sidebar @endauth">
+@auth
+    @php
+        $usuario = Auth::user();
+        $persona = $usuario->persona;
+        $roleActivo = session('role_activo') ?? ($persona && $persona->roles->count() ? $persona->roles->first()->nombre : 'publico');
+    @endphp
+
+    <!-- Barra lateral dinámica -->
+    <aside id="sidebar" class="sidebar">
+        @includeFirst([
+            "layouts.sidebars.{$roleActivo}",
+            'layouts.sidebars.default'
+        ])
+    </aside>
+
+    <!-- Capa oscura móvil -->
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+    <!-- Barra superior móvil -->
+    <div class="mobile-top-bar">
+        <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Abrir menú">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+        <span class="mobile-logo-text">SIACSACIG</span>
+    </div>
+
+    <!-- Contenido principal (wrapper) -->
+    <div class="main-wrapper">
+        <!-- Barra superior de escritorio -->
+        <header class="top-header">
+            <div class="top-header-left">
+                <span class="welcome-text">Bienvenido, {{ $persona->nombres }} {{ $persona->apellidos }}</span>
+            </div>
+            <div class="top-header-right">
+                <div class="user-info">
+                    <span class="role-badge">{{ ucfirst($roleActivo) }}</span>
+                    <span class="user-name">{{ $persona->nombres }} {{ $persona->apellidos }}</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Contenido de la página -->
+        <main class="main-content">
+            @yield('content')
+        </main>
+    </div>
+@else
+    <div class="auth-wrapper">
+        @yield('content')
+    </div>
+@endauth
+
+    <script src="{{ asset('assets/js/menu.js') }}"></script>
+    <!-- CRUCIAL: Directiva para inyectar scripts específicos de cada página -->
+    @stack('scripts')
+</body>
+</html>
+Archivo B: menu.css (Estilos globales de estructura)
+Este archivo unifica el comportamiento de la barra lateral, la barra superior horizontal (.top-header) y el contenedor principal (.main-wrapper).
+code
+CSS
+/* ==========================================================================
+   MENU LATERAL (SIDEBAR)
+   ========================================================================== */
+.sidebar {
+    width: var(--sidebar-width-expanded);
+    background-color: var(--color-bg-sidebar);
+    border-right: 0.1rem solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    padding: 0 1.6rem;
+    height: 100vh;
+    transition: transform var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1), 
+                width var(--transition-speed) ease;
+    
+    /* MODIFICACIÓN: Usamos sticky para integrarlo al flujo flex del body */
+    position: sticky; 
+    left: 0;
+    top: 0;
+    z-index: 1000;
+}
+
+/* Cabecera, botones, submenús y footer se mantienen igual a tu código original... */
+
+/* Estados de colapso */
+.sidebar.collapsed {
+    width: var(--sidebar-width-collapsed);
+}
+
+/* ==========================================================================
+   ESTRUCTURA DEL WRAPPER PRINCIPAL Y ACOPLE DINÁMICO (FLEXBOX)
+   ========================================================================== */
+.main-wrapper {
+    flex: 1; /* Se expande o contrae dinámicamente según el tamaño del sidebar */
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--color-bg-body);
+}
+
+/* ==========================================================================
+   BARRA SUPERIOR HORIZONTAL DE ESCRITORIO
+   ========================================================================== */
+.top-header {
+    height: 6rem;
+    background-color: #ffffff;
+    border-bottom: 0.1rem solid var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 4rem;
+    box-sizing: border-box;
+    position: sticky;
+    top: 0;
+    z-index: 900;
+}
+
+.top-header-left, .top-header-right {
+    display: flex;
+    align-items: center;
+}
+
+.welcome-text {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--color-text-main);
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+}
+
+.role-badge {
+    background-color: var(--color-active-bg);
+    color: var(--color-text-active);
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.4rem 1rem;
+    border-radius: 0.6rem;
+}
+
+.user-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-text-main);
+}
+
+/* ==========================================================================
+   RESPONSIVO PARA PANTALLAS MÓVILES (De 1024px hacia abajo)
+   ========================================================================== */
+@media (max-width: 1024px) {
+    .mobile-top-bar {
+        display: flex;
+    }
+
+    .sidebar {
+        /* En móvil el menú sí se comporta de forma flotante (fixed) */
+        position: fixed;
+        transform: translateX(-100%);
+        width: 28rem;
+        height: 100vh;
+        box-shadow: 1rem 0 3rem rgba(0, 0, 0, 0.1);
+    }
+
+    .sidebar.mobile-open {
+        transform: translateX(0);
+    }
+
+    .sidebar .toggle-btn {
+        display: block;
+    }
+
+    .main-wrapper {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+
+    .top-header {
+        display: none;
+    }
+}
+Archivo C: Estilos de Vistas Específicas (dashboardSuperUser.css, denominaciones.css, etc.)
+A partir de ahora, ninguno de estos archivos debe contener márgenes ni anchos para .main-content. Asegúrate de que su definición de contenido quede limpia:
+code
+CSS
+.main-content {
+    flex-grow: 1;
+    padding: 4rem;
+    min-height: 100vh;
+    width: 100%; /* No usar margin-left ni width dinámicos aquí */
+    box-sizing: border-box;
+}
+4. Estructura de las Vistas .blade.php a partir de ahora
+Para mantener la consistencia y modularidad en Laravel, evita crear estructuras completas de HTML (html, head, body). Todas tus vistas internas deben heredar de la plantilla base y estructurarse siguiendo este orden estricto:
+code
+Html
+@extends('layouts.app')
+
+<!-- 1. Título dinámico de la pestaña -->
+@section('title', 'Nombre de la Vista - UNEY')
+
+<!-- 2. Hojas de estilo únicas para esta vista -->
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('assets/css/ruta/estilo-propio.css') }}">
+@endpush
+
+<!-- 3. Contenido de la página (se inyecta dentro del .main-content del app.blade.php) -->
+@section('content')
+
+    <!-- Cabecera de la sección -->
+    <header class="main-header">
+        <div class="header-welcome">
+            <h1>Título de la Sección</h1>
+            <p>Descripción breve.</p>
+        </div>
+    </header>
+
+    <!-- Contenido HTML de tu vista (Tablas, Formularios, Modales, etc.) -->
+    <section class="tu-contenedor-css">
+        <!-- Tu código aquí... -->
+    </section>
+
+@endsection
+
+<!-- 4. Archivos JavaScript únicos para esta vista -->
+@push('scripts')
+    <script src="{{ asset('assets/js/ruta/script-propio.js') }}"></script>
+@endpush

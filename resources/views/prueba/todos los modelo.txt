@@ -1,0 +1,1640 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Actividad extends Model {
+    protected $table = 'actividades';
+    protected $primaryKey = 'id_actividad';
+    
+    protected $fillable = [
+        'nombre', 
+        'descripcion', 
+        'fecha_inscripcion_inicio', 
+        'fecha_inscripcion_fin',
+        'fecha', 
+        'hora_inicio', 
+        'hora_fin', 
+        'estado', 
+        'id_modalidad', 
+        'id_salon', 
+        'id_tipo_actividad', 
+        'id_tipo_documento', 
+        'id_tema', 
+        'id_trimestre',
+        'id_organizador'
+    ];
+
+    protected $casts = [
+        'fecha'                    => 'date',
+        'fecha_inscripcion_inicio' => 'date',
+        'fecha_inscripcion_fin'    => 'date',
+    ];
+
+    public function tipo(): BelongsTo {
+        return $this->belongsTo(TipoActividad::class, 'id_tipo_actividad', 'id_tipo_actividad');
+    }
+
+    public function salon(): BelongsTo {
+        return $this->belongsTo(Salon::class, 'id_salon', 'id_salon');
+    }
+
+    // NUEVO: Relación singular para cargar el tema principal en el panel del Rector
+    public function tema(): BelongsTo {
+        return $this->belongsTo(Tema::class, 'id_tema', 'id_tema');
+    }
+
+    // Relación principal hacia temas (HasMany)
+    public function temas(): HasMany {
+        return $this->hasMany(Tema::class, 'id_actividad', 'id_actividad');
+    }
+
+    // ALIAS: Para compatibilidad con el JS que busca la relación 'sesiones'
+    public function sesiones(): HasMany {
+        return $this->hasMany(Tema::class, 'id_actividad', 'id_actividad');
+    }
+
+    public function trimestre(): BelongsTo {
+        return $this->belongsTo(Trimestre::class, 'id_trimestre', 'id_trimestre');
+    }
+
+    // Relación original
+    public function modalidadRelacion(): BelongsTo {
+        return $this->belongsTo(Modalidad::class, 'id_modalidad', 'id_modalidad');
+    }
+
+    // ALIAS: Para evitar que se muestre "N/A" al buscar la relación directa 'modalidad'
+    public function modalidad(): BelongsTo {
+        return $this->belongsTo(Modalidad::class, 'id_modalidad', 'id_modalidad');
+    }
+
+    public function tipoDocumento(): BelongsTo {
+        return $this->belongsTo(TipoDocumento::class, 'id_tipo_documento', 'id_tipo_documento');
+    }
+
+    public function inscripciones(): HasMany {
+        return $this->hasMany(Inscripcion::class, 'id_actividad', 'id_actividad');
+    }
+
+    // Relación con el Organizador de la actividad (Persona)
+    public function organizador(): BelongsTo {
+        return $this->belongsTo(Persona::class, 'id_organizador', 'id');
+    }
+
+    // NUEVO ALIAS: Para el listado de actividades en los reportes
+    public function creador(): BelongsTo {
+        return $this->belongsTo(Persona::class, 'id_organizador', 'id');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Asistencia extends Model {
+    protected $table = 'asistencias';
+    protected $primaryKey = 'id_asistencia';
+    protected $fillable = ['estado', 'verificacion_qr'];
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class AuditLog extends Model
+{
+    protected $table = 'audit_logs';
+
+    protected $fillable = [
+        'usuario_id',
+        'persona_id',
+        'accion',
+        'modelo',
+        'modelo_id',
+        'cambios',
+        'ip',
+        'user_agent'
+    ];
+
+    protected $casts = [
+        'cambios' => 'array'
+    ];
+
+     public function usuario()
+    {
+        return $this->belongsTo(Usuario::class, 'usuario_id');
+    }
+
+    public function persona()
+    {
+        return $this->belongsTo(Persona::class, 'persona_id');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Cargo extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'nombre',
+        'estado'
+    ];
+
+    protected $casts = [
+        'estado' => 'boolean',
+    ];
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Carrera extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'nombre',
+        'descripcion',
+        'estado'
+    ];
+
+    protected $casts = [
+        'estado' => 'boolean',
+    ];
+
+    public function expedientes()
+    {
+        return $this->hasMany(ExpedienteEstudiante::class, 'carrera_id');
+    }
+
+    /**
+     * Estudiantes asociados indirectamente (a través de expedientes)
+     */
+    public function estudiantes()
+    {
+        return $this->hasManyThrough(
+            Estudiante::class,
+            ExpedienteEstudiante::class,
+            'carrera_id',     
+            'id',                          
+            'estudiante_id'   
+        );
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+class CartaPasantia extends Model
+{
+    use HasFactory;
+
+    protected $table = 'cartas_pasantia';
+    protected $fillable = [
+        'estudiante_id',
+        'tipo',
+        'institucion_destino',
+        'fecha_emision',
+        'archivo',
+        'estado'
+    ];
+
+    protected $casts = ['fecha_emision' => 'date'];
+
+    public function estudiante()
+    {
+        return $this->belongsTo(Estudiante::class, 'estudiante_id');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+class Certificado extends Model
+{
+    use HasFactory, SoftDeletes;
+
+    protected $table = 'certificados';
+    protected $fillable = [
+        'persona_id','tipo',
+        'actividad_id',
+        'sesion_id',
+        'codigo_verificacion',
+        'fecha_emision',
+        'archivo',
+        'firma_sello',
+        'qr_data',
+        'aprobado_por'
+    ];
+
+    protected $casts = ['fecha_emision' => 'date'];
+
+    public function persona()
+    {
+        return $this->belongsTo(Persona::class, 'persona_id');
+    }
+
+    public function actividad()
+    {
+        return $this->belongsTo(Actividad::class, 'actividad_id');
+    }
+
+    public function sesion()
+    {
+        return $this->belongsTo(Sesion::class, 'sesion_id');
+    }
+
+    public function aprobadoPor()
+    {
+        return $this->belongsTo(Persona::class, 'aprobado_por');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Curriculum extends Model
+{
+    protected $table = 'curriculums';
+
+    protected $fillable = [
+        'persona_id',
+        'especialidad',
+        'experiencia',
+        'archivo_cv',
+        'notas_internas'
+    ];
+
+    protected $casts = [
+        // no hay timestamps especiales por ahora
+    ];
+
+    public function persona(): BelongsTo
+    {
+        return $this->belongsTo(Persona::class, 'persona_id');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+class Docente extends Model
+{
+    use HasFactory;
+
+    protected $table = 'docentes';
+    protected $fillable = ['persona_id','profesion_id'];
+
+    public function persona()
+    {
+        return $this->belongsTo(Persona::class, 'persona_id');
+    }
+
+    public function profesion()
+    {
+        return $this->belongsTo(Profesion::class, 'profesion_id');
+    }
+
+    public function ponencias()
+    {
+        return $this->hasMany(PonenteSesion::class, 'docente_id');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class DocumentoExpediente extends Model
+{
+    use HasFactory;
+
+    protected $table = 'documentos_expediente';
+
+    protected $fillable = [
+        'expediente_id',
+        'tipo_documento',
+        'ruta_archivo',
+        'mime',
+        'subido_por',
+        'verificado_at',
+    ];
+
+    protected $casts = [
+        'verificado_at' => 'datetime',
+    ];
+
+    public function expediente()
+    {
+        return $this->belongsTo(ExpedienteEstudiante::class, 'expediente_id');
+    }
+
+    public function subidoPor()
+    {
+        return $this->belongsTo(Usuario::class, 'subido_por'); // asume modelo Usuario
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Documento extends Model {
+    protected $table = 'documentos';
+    protected $primaryKey = 'id_documento';
+    protected $fillable = ['nombre', 'descripcion', 'id_sello', 'id_firma'];
+
+    public function sello() {
+        return $this->belongsTo(Sello::class, 'id_sello');
+    }
+
+    public function firma() {
+        return $this->belongsTo(Firma::class, 'id_firma');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Empleado extends Model
+{
+    protected $table = 'empleados';
+
+    protected $fillable = [
+        'persona_id',
+        'cargo_id'
+    ];
+
+    public function persona(): BelongsTo
+    {
+        return $this->belongsTo(Persona::class, 'persona_id');
+    }
+
+    public function cargo(): BelongsTo
+    {
+        return $this->belongsTo(Cargo::class, 'cargo_id');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Encuesta extends Model
+{
+    protected $table = 'encuestas';
+
+    protected $fillable = [
+        'actividad_id',
+        'descripcion',
+        'fecha_limite'
+    ];
+
+    protected $casts = ['fecha_limite' => 'datetime'];
+
+    public function actividad(): BelongsTo
+    {
+        return $this->belongsTo(Actividad::class, 'actividad_id');
+    }
+
+    public function preguntas(): HasMany
+    {
+        return $this->hasMany(PreguntaEncuesta::class, 'encuesta_id');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Espacio extends Model
+{
+    protected $table = 'espacios';
+
+    protected $fillable = [
+        'nombre',
+        'ubicacion',
+        'capacidad',
+        'descripcion',
+        'estado'
+    ];
+
+    protected $casts = [
+        'capacidad' => 'integer',
+        'estado'    => 'boolean',
+    ];
+
+    public function actividades(): HasMany
+    {
+        return $this->hasMany(Actividad::class, 'espacio_id');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+class Estudiante extends Model
+{
+    use HasFactory;
+
+    protected $table = 'estudiantes';
+    protected $fillable = ['persona_id','carrera_id','modalidad_egreso','es_regular'];
+
+    protected $casts = [
+        'es_regular' => 'boolean',
+    ];
+
+    public function persona()
+    {
+        return $this->belongsTo(Persona::class, 'persona_id');
+    }
+
+    public function carrera()
+    {
+        return $this->belongsTo(Carrera::class, 'carrera_id');
+    }
+
+    public function expediente()
+    {
+        return $this->hasOne(ExpedienteEstudiante::class, 'estudiante_id');
+    }
+
+    public function inducciones()
+    {
+        return $this->hasMany(Induccion::class, 'estudiante_id');
+    }
+
+    public function cartasPasantia()
+    {
+        return $this->hasMany(CartaPasantia::class, 'estudiante_id');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class ExpedienteEstudiante extends Model
+{
+    use HasFactory;
+
+    protected $table = 'expedientes_estudiante';
+
+    protected $fillable = [
+        'estudiante_id',
+        'carrera_id',
+        'ruta_carnet',
+        'carnet_verificado_at',
+        'ruta_notas_certificadas',
+        'notas_verificadas_at',
+        'tipo_solicitud',
+        'estado_solicitud',
+        'tutor_asignado_id',
+        'observaciones',
+    ];
+
+    protected $casts = [
+        'carnet_verificado_at' => 'datetime',
+        'notas_verificadas_at' => 'datetime',
+    ];
+
+    public function estudiante()
+    {
+        return $this->belongsTo(Estudiante::class, 'estudiante_id');
+    }
+
+    public function carrera()
+    {
+        return $this->belongsTo(Carrera::class, 'carrera_id');
+    }
+
+    public function documentos()
+    {
+        return $this->hasMany(DocumentoExpediente::class, 'expediente_id');
+    }
+
+    public function tutorAsignado()
+    {
+        return $this->belongsTo(Docente::class, 'tutor_asignado_id');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+class Feriado extends Model
+{
+    use HasFactory;
+
+    protected $table = 'feriados';
+
+    protected $fillable = [
+        'fecha',
+        'descripcion',
+        'recurrente',
+        'creado_por',
+    ];
+
+    protected $casts = [
+        'fecha' => 'date',
+        'recurrente' => 'boolean',
+    ];
+
+    public function creador()
+    {
+        return $this->belongsTo(Persona::class, 'creado_por');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Firma extends Model {
+    protected $table = 'firmas';
+    protected $primaryKey = 'id_firma';
+    protected $fillable = ['nombre', 'imagen', 'estado'];
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Induccion extends Model
+{
+    use HasFactory;
+
+    protected $table = 'inducciones';
+
+    protected $fillable = [
+        'solicitud_id',
+        'actividad_id',
+        'estudiante_id',
+        'tutor_id',
+        'aprobada',
+        'horas_completadas',
+        'duracion_minutos',
+        'fecha_aprobacion',
+        'observaciones',
+    ];
+
+    protected $casts = [
+        'aprobada' => 'boolean',
+        'fecha_aprobacion' => 'datetime',
+    ];
+
+    public function solicitud()
+    {
+        return $this->belongsTo(SolicitudInduccion::class, 'solicitud_id');
+    }
+
+    public function actividad()
+    {
+        return $this->belongsTo(Actividad::class, 'actividad_id');
+    }
+
+    public function estudiante()
+    {
+        return $this->belongsTo(Estudiante::class, 'estudiante_id');
+    }
+
+    public function tutor()
+    {
+        return $this->belongsTo(Docente::class, 'tutor_id');
+    }
+
+    public function tutoresAsignados()
+    {
+        return $this->hasMany(TutorAsignado::class, 'induccion_id');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Inscripcion extends Model
+{
+    protected $table = 'inscripciones';
+    protected $primaryKey = 'id_inscripcion';
+    protected $fillable = [
+        'fecha_registro', 
+        'id_estudiante', 
+        'id_publico_general', 
+        'id_asistencia', 
+        'id_actividad', 
+        'id_documento', 
+        'estado'
+    ];
+
+    // Relación con el estudiante (si aplica)
+    public function estudiante()
+    {
+        return $this->belongsTo(Estudiante::class, 'id_estudiante');
+    }
+
+    // Relación con la persona física (si es público general)
+    public function publicoGeneral()
+    {
+        return $this->belongsTo(Persona::class, 'id_publico_general', 'id');
+    }
+
+    // Relación con la actividad
+    public function actividad()
+    {
+        return $this->belongsTo(Actividad::class, 'id_actividad', 'id_actividad');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Modalidad extends Model {
+    protected $table = 'modalidades';
+    protected $primaryKey = 'id_modalidad';
+    protected $fillable = ['nombre_modalidad', 'estado'];
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+class Persona extends Model
+{
+    use HasFactory, SoftDeletes;
+
+    protected $table = 'personas';
+
+    protected $fillable = [
+        'nombres','apellidos','cedula','telefono','sexo','foto','cedula_imagen','verified_at'
+    ];
+
+    protected $casts = [
+        'verified_at' => 'datetime',
+    ];
+
+    // Relaciones
+    public function usuario()
+    {
+        return $this->hasOne(Usuario::class, 'persona_id');
+    }
+
+    public function roles()
+    {
+        return $this->belongsToMany(Role::class, 'persona_rol', 'persona_id', 'rol_id')
+            ->withPivot(['asignado_por','activo','asignado_en'])
+            ->withTimestamps();
+    }
+
+    public function personaRols()
+    {
+        return $this->hasMany(PersonaRol::class, 'persona_id');
+    }
+
+    public function documentosExpediente()
+    {
+        return $this->hasMany(DocumentoExpediente::class, 'subido_por');
+    }
+
+    public function docentes()
+    {
+        return $this->hasOne(Docente::class, 'persona_id');
+    }
+
+    public function estudiante()
+    {
+        return $this->hasOne(Estudiante::class, 'persona_id');
+    }
+
+    public function empleado()
+    {
+    // Una persona tiene un perfil de empleado
+    return $this->hasOne(Empleado::class, 'persona_id');
+    }
+
+    public function asistencias()
+    {
+        return $this->hasMany(Asistencia::class, 'persona_id');
+    }
+
+    public function certificados()
+    {
+        return $this->hasMany(Certificado::class, 'persona_id');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+class PersonaRol extends Model
+{
+    use HasFactory;
+
+    protected $table = 'persona_rol';
+
+    protected $fillable = ['persona_id','rol_id','asignado_por','activo','asignado_en'];
+
+    public function persona()
+    {
+        return $this->belongsTo(Persona::class, 'persona_id');
+    }
+
+    public function rol()
+    {
+        return $this->belongsTo(Role::class, 'rol_id');
+    }
+
+    public function asignadoPor()
+    {
+        return $this->belongsTo(Persona::class, 'asignado_por');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Planificacion extends Model {
+    protected $table = 'planificaciones';
+    protected $primaryKey = 'id_planificacion';
+    
+    protected $fillable = [
+        'titulo', 
+        'anio', // Requerido aquí para permitir la asignación masiva desde el controlador
+        'fecha_creacion'
+    ];
+
+    protected $casts = [
+        'fecha_creacion' => 'date',
+        'anio'           => 'integer',
+    ];
+
+    public function trimestres(): HasMany {
+        return $this->hasMany(Trimestre::class, 'id_planificacion', 'id_planificacion');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class PonenteSesion extends Model
+{
+    use HasFactory;
+
+    protected $table = 'ponente_sesion';
+
+    protected $fillable = [
+        'sesion_id',
+        'docente_id',
+        'persona_id',
+        'rol',
+    ];
+
+    // Relaciones
+    public function sesion()
+    {
+        return $this->belongsTo(Sesion::class, 'sesion_id');
+    }
+
+    // si el ponente es un docente registrado en el sistema
+    public function docente()
+    {
+        return $this->belongsTo(Docente::class, 'docente_id');
+    }
+
+    // si el ponente es un invitado que solo tiene Persona
+    public function persona()
+    {
+        return $this->belongsTo(Persona::class, 'persona_id');
+    }
+
+    // Helper que devuelve la entidad ponente preferente (Docente si existe, sino Persona)
+    public function getPonenteAttribute()
+    {
+        if ($this->docente) {
+            return $this->docente;
+        }
+        return $this->persona;
+    }
+
+    // Indica si el ponente es un docente del sistema
+    public function esDocente(): bool
+    {
+        return ! is_null($this->docente_id);
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class PreguntaEncuesta extends Model
+{
+    protected $table = 'preguntas_encuesta';
+
+    protected $fillable = [
+        'encuesta_id',
+        'texto',
+        'tipo',
+        'opciones',
+        'orden'
+    ];
+
+    protected $casts = [
+        'opciones' => 'array',
+    ];
+
+    public function encuesta(): BelongsTo
+    {
+        return $this->belongsTo(Encuesta::class, 'encuesta_id');
+    }
+
+    public function respuestas(): HasMany
+    {
+        return $this->hasMany(RespuestaEncuesta::class, 'pregunta_id');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Profesion extends Model
+{
+    use HasFactory;
+
+    protected $table = 'profesiones';
+
+    protected $fillable = [
+        'nombre',
+        'descripcion',
+        'estado'
+    ];
+
+    protected $casts = [
+        'estado' => 'boolean',
+    ];
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class RespuestaEncuesta extends Model
+{
+    protected $table = 'respuestas_encuesta';
+
+    protected $fillable = [
+        'pregunta_id',
+        'persona_id',
+        'valor'
+    ];
+
+    public function pregunta(): BelongsTo
+    {
+        return $this->belongsTo(PreguntaEncuesta::class, 'pregunta_id');
+    }
+
+    public function persona(): BelongsTo
+    {
+        return $this->belongsTo(Persona::class, 'persona_id');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+class Role extends Model
+{
+    use HasFactory;
+
+    protected $table = 'roles';
+
+    protected $fillable = [
+        'nombre',
+        'descripcion'
+    ];
+
+    public function personas()
+    {
+        return $this->belongsToMany(Persona::class, 'persona_rol', 'rol_id', 'persona_id')
+            ->withPivot(['asignado_por','activo','asignado_en'])
+            ->withTimestamps();
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Salon extends Model {
+    protected $table = 'salones';
+    protected $primaryKey = 'id_salon';
+    protected $fillable = ['nombre', 'capacidad', 'estado'];
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Sello extends Model {
+    protected $table = 'sellos';
+    protected $primaryKey = 'id_sello';
+    protected $fillable = ['nombre', 'imagen', 'estado'];
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+class Sesion extends Model
+{
+    use HasFactory, SoftDeletes;
+
+    protected $table = 'sesiones';
+    protected $fillable = [
+        'actividad_id',
+        'numero_sesion',
+        'tema','start_at',
+        'end_at','lugar',
+        'duracion_minutos',
+        'qr_token',
+        'qr_expires_at'
+    ];
+
+    protected $casts = [
+        'start_at' => 'datetime',
+        'end_at' => 'datetime',
+        'qr_expires_at' => 'datetime',
+    ];
+
+    public function actividad()
+    {
+        return $this->belongsTo(Actividad::class, 'actividad_id');
+    }
+
+    public function ponentes()
+    {
+        return $this->hasMany(PonenteSesion::class, 'sesion_id');
+    }
+
+    public function asistencias()
+    {
+        return $this->hasMany(Asistencia::class, 'sesion_id');
+    }
+
+    public function certificados()
+    {
+        return $this->hasMany(Certificado::class, 'sesion_id');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
+
+class SolicitudEmpleo extends Model
+{
+    use HasFactory;
+
+    protected $table = 'solicitudes_empleo';
+
+    protected $fillable = [
+        'persona_id',
+        'mensaje',
+        'estado',
+        'revisado_por',
+        'fecha_revision',
+    ];
+
+    protected $casts = [
+        'fecha_revision' => 'datetime',
+    ];
+
+    // Relaciones
+    // postulante
+    public function persona()
+    {
+        return $this->belongsTo(Persona::class, 'persona_id');
+    }
+
+    // quien revisó la solicitud (puede ser persona/usuario/coordinador)
+    public function revisadoPor()
+    {
+        return $this->belongsTo(Persona::class, 'revisado_por');
+    }
+
+    // Helpers
+    public function isPendiente(): bool
+    {
+        return $this->estado === 'pendiente';
+    }
+
+    public function isAprobada(): bool
+    {
+        return $this->estado === 'aprobada';
+    }
+
+    public function isRechazada(): bool
+    {
+        return $this->estado === 'rechazada';
+    }
+
+    // Scope para filtrar por estado (tipado)
+    /**
+     * Filtra solicitudes por estado.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  string  $estado
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopePorEstado(Builder $query, string $estado): Builder
+    {
+        return $query->where('estado', $estado);
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class SolicitudInduccion extends Model
+{
+    use HasFactory;
+
+    protected $table = 'solicitudes_induccion';
+
+    protected $fillable = [
+        'estudiante_id',
+        'expediente_id',
+        'tipo',
+        'estado',
+        'observacion',
+        'fecha_solicitud',
+        'fecha_respuesta',
+        'cartas_activas',
+    ];
+
+    protected $casts = [
+        'fecha_solicitud' => 'datetime',
+        'fecha_respuesta' => 'datetime',
+        'cartas_activas' => 'integer',
+    ];
+
+    public function estudiante()
+    {
+        return $this->belongsTo(Estudiante::class, 'estudiante_id');
+    }
+
+    public function expediente()
+    {
+        return $this->belongsTo(ExpedienteEstudiante::class, 'expediente_id');
+    }
+
+    public function induccion()
+    {
+        return $this->hasOne(Induccion::class, 'solicitud_id');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Tema extends Model {
+    protected $table = 'temas';
+    protected $primaryKey = 'id_tema';
+    
+    protected $fillable = [
+        'tema_sesion', 
+        'descripcion', 
+        'numero_de_sesion', 
+        'fecha', 
+        'horario_inicio', 
+        'horario_fin', 
+        'estado', 
+        'id_docente', 
+        'id_actividad'
+    ];
+
+    // Atributos dinámicos que se anexan automáticamente al convertir el modelo a un objeto JSON
+    protected $appends = [
+        'numero_sesion',
+        'tema',
+        'hora_inicio',
+        'hora_fin',
+        'start_at',
+        'end_at',
+        'status',
+        'docente',
+        'nombre_docente'
+    ];
+
+    // Relación con Docentes
+    public function docente() {
+        return $this->belongsTo(Docente::class, 'id_docente', 'id');
+    }
+
+    // Relación con Actividades
+    public function actividad() {
+        return $this->belongsTo(Actividad::class, 'id_actividad', 'id_actividad');
+    }
+
+    // ==========================================
+    // ACCESSORS DE COMPATIBILIDAD CON EL JAVASCRIPT
+    // ==========================================
+    
+    public function getNumeroSesionAttribute() {
+        return $this->numero_de_sesion;
+    }
+
+    public function getTemaAttribute() {
+        return $this->tema_sesion;
+    }
+
+    public function getHoraInicioAttribute() {
+        return $this->horario_inicio;
+    }
+
+    public function getHoraFinAttribute() {
+        return $this->horario_fin;
+    }
+
+    public function getStartAtAttribute() {
+        $fechaStr = ($this->fecha instanceof \Carbon\Carbon) ? $this->fecha->format('Y-m-d') : $this->fecha;
+        return ($fechaStr && $this->horario_inicio) ? "{$fechaStr} {$this->horario_inicio}" : $this->horario_inicio;
+    }
+
+    public function getEndAtAttribute() {
+        $fechaStr = ($this->fecha instanceof \Carbon\Carbon) ? $this->fecha->format('Y-m-d') : $this->fecha;
+        return ($fechaStr && $this->horario_fin) ? "{$fechaStr} {$this->horario_fin}" : $this->horario_fin;
+    }
+
+    public function getStatusAttribute() {
+        return $this->estado;
+    }
+
+    public function getDocenteAttribute() {
+        // Obtenemos la relación de forma segura evitando la recursividad sobre la propiedad dinámica
+        $docente = $this->relationLoaded('docente') 
+            ? $this->getRelation('docente') 
+            : $this->docente()->first();
+
+        if ($docente && $docente->persona) {
+            return $docente->persona->nombres . ' ' . $docente->persona->apellidos;
+        }
+
+        return 'Sin Docente Asignado';
+    }
+
+    public function getNombreDocenteAttribute() {
+        return $this->getDocenteAttribute();
+    }
+
+    /**
+     * Sobreescribimos toArray para garantizar compatibilidad con múltiples formatos
+     * (camelCase, snake_case, inglés y español) en respuestas JSON y serializaciones.
+     */
+    public function toArray() {
+        $array = parent::toArray();
+        
+        $fechaStr = ($this->fecha instanceof \Carbon\Carbon) ? $this->fecha->format('Y-m-d') : $this->fecha;
+        $startAt = ($fechaStr && $this->horario_inicio) ? "{$fechaStr} {$this->horario_inicio}" : $this->horario_inicio;
+        $endAt = ($fechaStr && $this->horario_fin) ? "{$fechaStr} {$this->horario_fin}" : $this->horario_fin;
+        
+        $nombreDocente = $this->getDocenteAttribute();
+
+        // Identificadores y Títulos
+        $array['idTema'] = $this->id_tema;
+        $array['tema_sesion'] = $this->tema_sesion;
+        $array['temaSesion'] = $this->tema_sesion;
+        $array['tema'] = $this->tema_sesion;
+        $array['nombre'] = $this->tema_sesion;
+        $array['title'] = $this->tema_sesion;
+        
+        // Descripciones
+        $array['descripcion'] = $this->descripcion;
+        $array['description'] = $this->descripcion;
+        
+        // Números de sesión
+        $array['numero_de_sesion'] = $this->numero_de_sesion;
+        $array['numeroDeSesion'] = $this->numero_de_sesion;
+        $array['numero_sesion'] = $this->numero_de_sesion;
+        $array['numeroSesion'] = $this->numero_de_sesion;
+        $array['numero'] = $this->numero_de_sesion;
+        
+        // Horas e inicios (Compatibilidad con formateadores Date de JS)
+        $array['horario_inicio'] = $this->horario_inicio;
+        $array['horarioInicio'] = $this->horario_inicio;
+        $array['horario_fin'] = $this->horario_fin;
+        $array['horarioFin'] = $this->horario_fin;
+        
+        $array['hora_inicio'] = $this->horario_inicio;
+        $array['horaInicio'] = $this->horario_inicio;
+        $array['hora_fin'] = $this->horario_fin;
+        $array['horaFin'] = $this->horario_fin;
+        
+        $array['start_at'] = $startAt;
+        $array['startAt'] = $startAt;
+        $array['end_at'] = $endAt;
+        $array['endAt'] = $endAt;
+        
+        // Estado
+        $array['estado'] = $this->estado;
+        $array['status'] = $this->estado;
+        
+        // Docente asignado
+        $array['docente'] = $nombreDocente;
+        $array['nombre_docente'] = $nombreDocente;
+        $array['nombreDocente'] = $nombreDocente;
+        $array['teacher'] = $nombreDocente;
+        
+        return $array;
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class TipoActividad extends Model {
+    protected $table = 'tipo_actividades';
+    protected $primaryKey = 'id_tipo_actividad';
+    
+    protected $fillable = [
+        'nombre', 
+        'descripcion', 
+        'duracion', 
+        'estado'
+    ];
+
+    protected $casts = [
+        'estado' => 'boolean',
+    ];
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class TipoDocumento extends Model {
+    protected $table = 'tipo_documentos';
+    protected $primaryKey = 'id_tipo_documento';
+    protected $fillable = ['titulo', 'descripcion', 'estado'];
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class TipoEstudiante extends Model
+{
+    // Definimos explícitamente el nombre de la tabla
+    protected $table = 'tipo_estudiantes';
+
+    // Campos permitidos para asignación masiva
+    protected $fillable = [
+        'nombre',
+        'estado',
+    ];
+
+    // Casteamos el campo estado como booleano
+    protected $casts = [
+        'estado' => 'boolean',
+    ];
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Trimestre extends Model {
+    protected $table = 'trimestres';
+    protected $primaryKey = 'id_trimestre';
+    
+    protected $fillable = [
+        'nombre', 
+        'fecha_inicio', 
+        'fecha_fin', 
+        'id_planificacion'
+    ];
+
+    protected $casts = [
+        'fecha_inicio' => 'date',
+        'fecha_fin'    => 'date',
+    ];
+
+    public function planificacion(): BelongsTo {
+        // Se definen explícitamente (ModeloRelacionado, Foreign Key, Owner Key)
+        return $this->belongsTo(Planificacion::class, 'id_planificacion', 'id_planificacion');
+    }
+
+    public function actividades(): HasMany {
+        // Se definen explícitamente (ModeloRelacionado, Foreign Key, Local Key)
+        return $this->hasMany(Actividad::class, 'id_trimestre', 'id_trimestre');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class TutorAsignado extends Model
+{
+    use HasFactory;
+
+    protected $table = 'tutores_asignados';
+
+    protected $fillable = [
+        'induccion_id',
+        'docente_id',
+        'estudiante_id',
+        'fecha_asignacion',
+        'activo',
+        'observaciones',
+    ];
+
+    protected $casts = [
+        'fecha_asignacion' => 'datetime',
+        'activo' => 'boolean',
+    ];
+
+    public function induccion()
+    {
+        return $this->belongsTo(Induccion::class, 'induccion_id');
+    }
+
+    public function docente()
+    {
+        return $this->belongsTo(Docente::class, 'docente_id');
+    }
+
+    public function estudiante()
+    {
+        return $this->belongsTo(Estudiante::class, 'estudiante_id');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class UserApproval extends Model
+{
+    protected $table = 'user_approvals';
+
+    protected $fillable = [
+        'persona_id',
+        'tipo',
+        'estado',
+        'solicitado_por',
+        'aprobado_por',
+        'motivo',
+        'fecha_solicitud',
+        'fecha_respuesta'
+    ];
+
+     protected $casts = ['fecha_solicitud' => 'datetime','fecha_respuesta' => 'datetime'];
+
+    public function persona()
+    {
+        return $this->belongsTo(Persona::class, 'persona_id');
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Usuario extends Authenticatable
+{
+    protected $table = 'usuarios';
+
+    protected $fillable = [
+        'persona_id',
+        'email',
+        'password',
+        'verificado',
+        'activo',
+        'aprobado_por',
+        'aprobado_at'
+    ];
+
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    protected $casts = [
+        'verificado' => 'boolean',
+        'activo' => 'boolean',
+        'password' => 'hashed', // Hashing automático nativo de Laravel (Bcrypt/Argon2)
+    ];
+
+    /**
+     * Relación con la Persona base del usuario.
+     */
+    public function persona(): BelongsTo
+    {
+        return $this->belongsTo(Persona::class, 'persona_id');
+    }
+
+    /**
+     * Accesor para obtener el nombre completo.
+     */
+    public function getNombreCompletoAttribute(): ?string
+    {
+        return $this->persona ? $this->persona->nombre_completo ?? $this->persona->nombres . ' ' . $this->persona->apellidos : null;
+    }
+
+    // =========================================================================
+    // RELACIONES PARA DASHBOARDS (DOCENTE Y ESTUDIANTE)
+    // =========================================================================
+
+    /**
+     * Relación con el perfil de Docente asociado (vía persona_id).
+     */
+    public function docente(): HasOne
+    {
+        return $this->hasOne(Docente::class, 'persona_id', 'persona_id');
+    }
+
+    /**
+     * Relación con el perfil de Estudiante asociado (vía persona_id).
+     */
+    public function estudiante(): HasOne
+    {
+        return $this->hasOne(Estudiante::class, 'persona_id', 'persona_id');
+    }
+
+    /**
+     * Obtiene las sesiones asignadas a este usuario en su rol de docente.
+     */
+    public function sesionesComoPonente()
+    {
+        $docente = $this->docente;
+
+        if (!$docente) {
+            // Retorna una consulta vacía segura en caso de que el usuario no sea docente
+            return $this->belongsToMany(Sesion::class, 'ponente_sesion', 'docente_id', 'sesion_id')
+                        ->whereRaw('1 = 0');
+        }
+
+        return $docente->sesionesComoPonente();
+    }
+
+    /**
+     * Relación con las Inscripciones de actividades (vía persona_id).
+     */
+    public function inscripciones(): HasMany
+    {
+        return $this->hasMany(Inscripcion::class, 'persona_id', 'persona_id');
+    }
+
+    /**
+     * Relación con los Certificados obtenidos por actividades o sesiones (vía persona_id).
+     */
+    public function certificados(): HasMany
+    {
+        return $this->hasMany(Certificado::class, 'persona_id', 'persona_id');
+    }
+
+     public function tutoriasAsignadas()
+    {
+        $docente = $this->docente;
+
+        if (!$docente) {
+            // Retorna una consulta vacía en caso de que el usuario no sea docente
+            return $this->hasMany(TutorAsignado::class, 'docente_id')
+                        ->whereRaw('1 = 0');
+        }
+
+        return $docente->tutoriasAsignadas();
+    }
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class VisitaCentro extends Model
+{
+    protected $table = 'visitas_centro';
+
+    protected $fillable = [
+        'nombre_completo',
+        'cedula',
+        'motivo_visita',
+        'fecha_visita'
+    ];
+
+     protected $casts = ['fecha_visita' => 'date'];
+
+    public function espacio()
+    {
+        return $this->belongsTo(Espacio::class, 'espacio_id');
+    }
+
+    public function persona()
+    {
+        return $this->belongsTo(Persona::class, 'persona_id');
+    }
+}

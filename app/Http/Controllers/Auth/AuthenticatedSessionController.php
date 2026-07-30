@@ -4,54 +4,49 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Traits\RedirectsByRole;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
 {
+    use RedirectsByRole;
+
     /**
-     * Display the login view.
+     * Muestra el formulario de login.
      */
-    public function create(): View
+    public function create()
     {
         return view('auth.login');
     }
 
     /**
-     * Handle an incoming authentication request.
+     * Inicia sesión con un usuario ya validado por LoginRequest.
      */
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
-
         $request->session()->regenerate();
 
-        return $this->authenticated($request, Auth::user());
-    }
+        $usuario = Auth::user();
 
-    /**
-     * Redirige al usuario tras el inicio de sesión según su rol.
-     */
-    protected function authenticated(Request $request, $user): RedirectResponse
-    {
-        if ($user->rol === 'Admin' || $user->rol === 'Docente') {
-            return redirect()->intended(route('admin.dashboard'));
+        // Validar si el usuario fue desactivado por un Rector
+        if (!$usuario->activo) {
+            Auth::logout();
+            return back()->withErrors(['email' => 'Tu cuenta ha sido desactivada.']);
         }
 
-        return redirect()->intended(route('estudiante.dashboard'));
+        return redirect($this->redirectToDashboardByRole($usuario));
     }
 
     /**
-     * Destroy an authenticated session.
+     * Cierra la sesión.
      */
     public function destroy(Request $request): RedirectResponse
     {
         Auth::guard('web')->logout();
-
         $request->session()->invalidate();
-
         $request->session()->regenerateToken();
 
         return redirect('/');

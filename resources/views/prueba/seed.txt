@@ -1,0 +1,561 @@
+quita la palabra editar del botón solo deja el icono 
+aquí tienes el codigo para que lo corrijas y me lo pasas completo por favor
+
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use App\Models\Actividad;
+use App\Models\Sesion;
+use App\Models\Inscripcion;
+use App\Models\Asistencia;
+use App\Models\Trimestre;
+use App\Models\TipoActividad;
+use App\Models\Modalidad;
+use App\Models\Espacio;
+use App\Models\Persona;
+use App\Models\Estudiante;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
+
+class ActividadesSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $now = Carbon::now();
+
+        // Obtener elementos necesarios (usar el primero que exista)
+        $trimestre = Trimestre::query()->first() ?? Trimestre::create([
+            'nombre' => $now->format('Y') . ' - Default',
+            'fecha_inicio' => $now->startOfYear()->toDateString(),
+            'fecha_fin' => $now->endOfYear()->toDateString(),
+            'activo' => true,
+            'creado_por' => Persona::query()->first()?->id ?? 1,
+        ]);
+
+        $tipo = TipoActividad::query()->first() ?? TipoActividad::create(['nombre' => 'Taller','descripcion' => 'Taller','estado' => 'active']);
+        $modalidad = Modalidad::query()->first() ?? Modalidad::create(['nombre' => 'Presencial','descripcion' => 'Presencial','activo' => true]);
+        $espacio = Espacio::query()->first() ?? Espacio::create(['nombre' => 'Sala 1','ubicacion'=>'Sede','capacidad'=>30]);
+
+        // Creador: toma al coordinador si existe, sino la primera persona
+        $coordinadorPersona = Persona::whereHas('roles', function ($q) { $q->where('nombre','coordinador'); })->first() ?? Persona::query()->first();
+
+        // Crear una actividad de ejemplo
+        $actividad = Actividad::create([
+            'trimestre_id' => $trimestre->id,
+            'tipo_actividad_id' => $tipo->id,
+            'modalidad_id' => $modalidad->id,
+            'nombre' => 'Taller de Buenas Prácticas en Alimentos',
+            'descripcion' => 'Taller introductorio sobre higiene y manipulación de alimentos.',
+            'fecha_inicio_inscripcion' => $now->subDays(7),
+            'fecha_fin_inscripcion' => $now->addDays(7),
+            'fecha_actividad' => $now->addDays(10)->toDateString(),
+            'duracion_total_minutos' => 180,
+            'cupos' => 30,
+            'espacio_id' => $espacio->id,
+            'estado' => 'planificada',
+            'qr_asistencia' => null,
+            'creado_por' => $coordinadorPersona?->id ?? 1,
+        ]);
+
+        // Crear 2 sesiones para la actividad
+        $start1 = $now->addDays(10)->setTime(9, 0);
+        $end1 = (clone $start1)->addMinutes(90);
+        $sesion1 = Sesion::create([
+            'actividad_id' => $actividad->id,
+            'numero_sesion' => 1,
+            'tema' => 'Higiene en la manipulación',
+            'start_at' => $start1,
+            'end_at' => $end1,
+            'lugar' => $espacio->nombre,
+            'duracion_minutos' => 90,
+            'qr_token' => (string) Str::uuid(),
+            'qr_expires_at' => $end1->copy()->addHours(4),
+        ]);
+
+        $start2 = (clone $start1)->addHours(2);
+        $end2 = (clone $start2)->addMinutes(90);
+        $sesion2 = Sesion::create([
+            'actividad_id' => $actividad->id,
+            'numero_sesion' => 2,
+            'tema' => 'Control de temperaturas',
+            'start_at' => $start2,
+            'end_at' => $end2,
+            'lugar' => $espacio->nombre,
+            'duracion_minutos' => 90,
+            'qr_token' => (string) Str::uuid(),
+            'qr_expires_at' => $end2->copy()->addHours(4),
+        ]);
+
+        // Inscribir al estudiante que creamos en UsersSeeder
+        $estPersona = Persona::whereHas('roles', function ($q) { $q->where('nombre','estudiante'); })->first();
+        if ($estPersona) {
+            Inscripcion::create([
+                'persona_id' => $estPersona->id,
+                'actividad_id' => $actividad->id,
+                'fecha_inscripcion' => $now,
+                'estado' => 'inscrito',
+            ]);
+
+            // Crear asistencias para ambas sesiones (simulate full attendance)
+            Asistencia::create([
+                'sesion_id' => $sesion1->id,
+                'persona_id' => $estPersona->id,
+                'fecha_hora' => $sesion1->start_at,
+                'metodo' => 'QR',
+                'registrado_por' => null,
+                'minutes_attended' => $sesion1->duracion_minutos ?? 90,
+            ]);
+
+            Asistencia::create([
+                'sesion_id' => $sesion2->id,
+                'persona_id' => $estPersona->id,
+                'fecha_hora' => $sesion2->start_at,
+                'metodo' => 'QR',
+                'registrado_por' => null,
+                'minutes_attended' => $sesion2->duracion_minutos ?? 90,
+            ]);
+        }
+    }
+}
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use App\Models\Carrera;
+
+class CarrerasSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $items = [
+            ['nombre' => 'Ciencias y Cultura de la Alimentación', 'descripcion' => 'Carrera UNey en alimentación'],
+            ['nombre' => 'Gastronomía', 'descripcion' => 'Formación en técnicas culinarias'],
+            ['nombre' => 'Tecnología de Alimentos', 'descripcion' => 'Procesos de producción y calidad'],
+        ];
+
+        foreach ($items as $it) {
+            Carrera::firstOrCreate(['nombre' => $it['nombre']], $it);
+        }
+    }
+}
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+
+class DatabaseSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $this->call([
+            RolesSeeder::class,
+            ProfesionesSeeder::class,
+            CarrerasSeeder::class,
+            EspaciosSeeder::class,
+            TipoActividadSeeder::class,
+            ModalidadesSeeder::class,
+            UsersSeeder::class,        // crea personas y usuarios (rector, coordinador, docente, estudiante)
+            TrimestresSeeder::class,   // ahora Trimestre puede usar creado_por existente
+            ActividadesSeeder::class,
+            FeriadosSeeder::class,  // crea actividad + sesiones + inscripciones + asistencias
+        ]);
+    }
+}
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use App\Models\Espacio;
+
+class EspaciosSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $items = [
+            ['nombre' => 'Auditorio Principal', 'ubicacion' => 'Edificio A', 'capacidad' => 120, 'descripcion' => 'Auditorio con proyector', 'estado' => true],
+            ['nombre' => 'Sala Taller 1', 'ubicacion' => 'Edificio B', 'capacidad' => 30, 'descripcion' => 'Sala práctica', 'estado' => true],
+            ['nombre' => 'Laboratorio de Alimentos', 'ubicacion' => 'Edificio C', 'capacidad' => 20, 'descripcion' => 'Equipado para prácticas', 'estado' => true],
+        ];
+
+        foreach ($items as $it) {
+            Espacio::firstOrCreate(['nombre' => $it['nombre']], $it);
+        }
+    }
+}
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+use App\Models\Feriado;
+
+class FeriadosSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $year = 2026;
+
+        // Usamos la función easter_date si está disponible en PHP para obtener timestamp de Pascua
+        // fallback a algoritmo simple si no la tuvieras
+        $easterTimestamp = function_exists('easter_date') ? easter_date($year) : strtotime($this->calculateEaster($year));
+        $easter = Carbon::createFromTimestamp($easterTimestamp)->startOfDay();
+
+        // Fechas móviles relativas a Pascua
+        $carnivalMonday = $easter->copy()->subDays(48);
+        $carnivalTuesday = $easter->copy()->subDays(47);
+        $maundyThursday = $easter->copy()->subDays(3); // Jueves Santo
+        $goodFriday = $easter->copy()->subDays(2);     // Viernes Santo
+
+        // Feriados fijos y calculados (lista base para Venezuela — ajusta según normativa local)
+        $feriados = [
+            // Fijos
+            ['fecha' => Carbon::create($year, 1, 1)->toDateString(), 'descripcion' => 'Año Nuevo', 'recurrente' => true],
+            // Carnaval (móviles)
+            ['fecha' => $carnivalMonday->toDateString(), 'descripcion' => 'Carnaval (Lunes)', 'recurrente' => false],
+            ['fecha' => $carnivalTuesday->toDateString(), 'descripcion' => 'Carnaval (Martes)', 'recurrente' => false],
+            // Semana Santa
+            ['fecha' => $maundyThursday->toDateString(), 'descripcion' => 'Jueves Santo', 'recurrente' => false],
+            ['fecha' => $goodFriday->toDateString(), 'descripcion' => 'Viernes Santo', 'recurrente' => false],
+            // Declaración de Independencia (19 Abril)
+            ['fecha' => Carbon::create($year, 4, 19)->toDateString(), 'descripcion' => 'Declaración de Independencia', 'recurrente' => true],
+            // Día del Trabajador (1 Mayo)
+            ['fecha' => Carbon::create($year, 5, 1)->toDateString(), 'descripcion' => 'Día del Trabajador', 'recurrente' => true],
+            // Batalla de Carabobo (24 Junio)
+            ['fecha' => Carbon::create($year, 6, 24)->toDateString(), 'descripcion' => 'Batalla de Carabobo', 'recurrente' => true],
+            // Día de la Independencia (5 Julio)
+            ['fecha' => Carbon::create($year, 7, 5)->toDateString(), 'descripcion' => 'Día de la Independencia', 'recurrente' => true],
+            // Natalicio de Simón Bolívar (24 Julio)
+            ['fecha' => Carbon::create($year, 7, 24)->toDateString(), 'descripcion' => 'Natalicio de Simón Bolívar', 'recurrente' => true],
+            // Día de la Resistencia Indígena (12 Octubre)
+            ['fecha' => Carbon::create($year, 10, 12)->toDateString(), 'descripcion' => 'Día de la Resistencia Indígena', 'recurrente' => true],
+            // Navidad (25 Dic)
+            ['fecha' => Carbon::create($year, 12, 25)->toDateString(), 'descripcion' => 'Navidad', 'recurrente' => true],
+        ];
+
+        // Inserta (evita duplicados en la misma fecha)
+        foreach ($feriados as $f) {
+            Feriado::updateOrCreate(
+                ['fecha' => $f['fecha']],
+                ['descripcion' => $f['descripcion'], 'recurrente' => (bool)$f['recurrente']]
+            );
+        }
+    }
+
+    // Algoritmo de respaldo para calcular Pascua si easter_date no existe
+    protected function calculateEaster(int $Y): string
+    {
+        // Meeus/Jones/Butcher algorithm (retorna fecha yyyy-mm-dd)
+        $a = $Y % 19;
+        $b = intdiv($Y, 100);
+        $c = $Y % 100;
+        $d = intdiv($b, 4);
+        $e = $b % 4;
+        $f = intdiv($b + 8, 25);
+        $g = intdiv($b - $f + 1, 3);
+        $h = (19 * $a + $b - $d - $g + 15) % 30;
+        $i = intdiv($c, 4);
+        $k = $c % 4;
+        $l = (32 + 2*$e + 2*$i - $h - $k) % 7;
+        $m = intdiv($a + 11*$h + 22*$l, 451);
+        $month = intdiv($h + $l - 7*$m + 114, 31);
+        $day = (($h + $l - 7*$m + 114) % 31) + 1;
+        return sprintf('%04d-%02d-%02d', $Y, $month, $day);
+    }
+}
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use App\Models\Modalidad;
+
+class ModalidadesSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $items = [
+            ['nombre' => 'Presencial', 'descripcion' => 'Asistencia física', 'activo' => true],
+            ['nombre' => 'Virtual', 'descripcion' => 'Sesiones en línea', 'activo' => true],
+            ['nombre' => 'Mixto', 'descripcion' => 'Combinación presencial y virtual', 'activo' => true],
+        ];
+
+        foreach ($items as $it) {
+            Modalidad::firstOrCreate(['nombre' => $it['nombre']], $it);
+        }
+    }
+}
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use App\Models\Profesion;
+
+class ProfesionesSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $items = [
+            ['nombre' => 'Nutricionista', 'descripcion' => 'Especialista en nutrición'],
+            ['nombre' => 'Chef', 'descripcion' => 'Gastronomía y preparación de alimentos'],
+            ['nombre' => 'Tecnólogo de alimentos', 'descripcion' => 'Procesos y seguridad alimentaria'],
+            ['nombre' => 'Investigador alimentario', 'descripcion' => 'Investigación en ciencias alimentarias'],
+        ];
+
+        foreach ($items as $it) {
+            Profesion::firstOrCreate(['nombre' => $it['nombre']], $it);
+        }
+    }
+}
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+
+class RolesSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $now = Carbon::now()->toDateTimeString();
+
+        DB::table('roles')->insertOrIgnore([
+            ['nombre' => 'rector', 'descripcion' => 'Rector del centro', 'created_at' => $now, 'updated_at' => $now],
+            ['nombre' => 'coordinador', 'descripcion' => 'Coordinador de actividades', 'created_at' => $now, 'updated_at' => $now],
+            ['nombre' => 'docente', 'descripcion' => 'Docente / Ponente', 'created_at' => $now, 'updated_at' => $now],
+            ['nombre' => 'estudiante', 'descripcion' => 'Estudiante UNey', 'created_at' => $now, 'updated_at' => $now],
+            ['nombre' => 'publico', 'descripcion' => 'Público general', 'created_at' => $now, 'updated_at' => $now],
+        ]);
+    }
+}
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use App\Models\TipoActividad;
+
+class TipoActividadSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $items = [
+            ['nombre' => 'Taller', 'descripcion' => 'Actividad práctica', 'estado' => 'active'],
+            ['nombre' => 'Curso', 'descripcion' => 'Formación teórica-práctica', 'estado' => 'active'],
+            ['nombre' => 'Charla', 'descripcion' => 'Conferencia breve', 'estado' => 'active'],
+        ];
+
+        foreach ($items as $it) {
+            TipoActividad::firstOrCreate(['nombre' => $it['nombre']], $it);
+        }
+    }
+}
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use App\Models\Trimestre;
+use Carbon\Carbon;
+
+class TrimestresSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $now = Carbon::now();
+
+        Trimestre::firstOrCreate(
+            ['nombre' => $now->format('Y') . ' - Trimestre 1'],
+            ['fecha_inicio' => $now->startOfYear()->toDateString(), 'fecha_fin' => $now->endOfYear()->toDateString(), 'activo' => true, 'creado_por' => 1]
+        );
+    }
+}
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use App\Models\Persona;
+use App\Models\Usuario;
+use App\Models\Docente;
+use App\Models\Estudiante;
+use App\Models\Curriculum;
+use App\Models\Carrera;
+use App\Models\Role;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+class UsersSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $now = Carbon::now()->toDateTimeString();
+
+        // Obten los roles por nombre (espera que RolesSeeder ya se haya ejecutado)
+        $rolesMap = Role::pluck('id', 'nombre')->toArray();
+
+        /**
+         * Helper para crear o recuperar persona+usuario por email.
+         * Devuelve array [$persona, $usuario]
+         */
+        $getOrCreateUser = function (array $personaData, string $email, string $password = 'password') use ($now) {
+            // Si ya existe usuario con ese email, lo devolvemos
+            $usuario = Usuario::where('email', $email)->first();
+            if ($usuario) {
+                return [$usuario->persona, $usuario];
+            }
+
+            // Si no existe, creamos persona y usuario nuevo
+            $persona = Persona::create(array_merge($personaData, [
+                'verified_at' => $personaData['verified_at'] ?? null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]));
+
+            $usuario = Usuario::create([
+                'persona_id' => $persona->id,
+                'email' => $email,
+                'password' => Hash::make($password),
+                'verificado' => $personaData['verified_at'] ? true : false,
+                'activo' => true,
+                'remember_token' => Str::random(10),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            return [$persona, $usuario];
+        };
+
+        DB::beginTransaction();
+        try {
+            // 1) Rector
+            [$rectorPersona, $rectorUsuario] = $getOrCreateUser([
+                'nombres' => 'Rector',
+                'apellidos' => 'Institución',
+                'cedula' => null,
+                'telefono' => null,
+                'sexo' => 'Otro',
+                'verified_at' => $now,
+            ], 'rector@cig.local', 'password');
+
+            // asignar rol rector (si existe)
+            if (isset($rolesMap['rector'])) {
+                $rectorPersona->roles()->syncWithoutDetaching([
+                    $rolesMap['rector'] => [
+                        'asignado_por' => $rectorPersona->id,
+                        'activo' => true,
+                        'asignado_en' => $now,
+                    ]
+                ]);
+            }
+
+            // 2) Coordinador
+            [$coordPersona, $coordUsuario] = $getOrCreateUser([
+                'nombres' => 'Coordinador',
+                'apellidos' => 'Centro',
+                'verified_at' => $now,
+            ], 'coordinador@cig.local', 'password');
+
+            if (isset($rolesMap['coordinador'])) {
+                $coordPersona->roles()->syncWithoutDetaching([
+                    $rolesMap['coordinador'] => [
+                        'asignado_por' => $rectorPersona->id ?? $coordPersona->id,
+                        'activo' => true,
+                        'asignado_en' => $now,
+                    ]
+                ]);
+            }
+
+            // 3) Docente
+            [$docPersona, $docUsuario] = $getOrCreateUser([
+                'nombres' => 'Juan',
+                'apellidos' => 'Docente',
+                'verified_at' => $now,
+            ], 'docente@cig.local', 'password');
+
+            if (isset($rolesMap['docente'])) {
+                $docPersona->roles()->syncWithoutDetaching([
+                    $rolesMap['docente'] => [
+                        'asignado_por' => $coordPersona->id ?? $docPersona->id,
+                        'activo' => true,
+                        'asignado_en' => $now,
+                    ]
+                ]);
+            }
+
+            // Crear Docente (si no existe)
+            if (! Docente::where('persona_id', $docPersona->id)->exists()) {
+                $profesionId = DB::table('profesiones')->where('nombre', 'Nutricionista')->value('id') ?? null;
+                Docente::create([
+                    'persona_id' => $docPersona->id,
+                    'profesion_id' => $profesionId,
+                ]);
+            }
+
+            // Curriculum ejemplo (si no existe)
+            if (! Curriculum::where('persona_id', $docPersona->id)->exists()) {
+                Curriculum::create([
+                    'persona_id' => $docPersona->id,
+                    'especialidad' => 'Nutrición comunitaria',
+                    'experiencia' => 'Docente con experiencia en talleres prácticos.',
+                    'archivo_cv' => null,
+                ]);
+            }
+
+            // 4) Estudiante regular UNey
+            [$estPersona, $estUsuario] = $getOrCreateUser([
+                'nombres' => 'María',
+                'apellidos' => 'Estudiante',
+                'verified_at' => null,
+            ], 'estudiante@cig.local', 'password');
+
+            if (isset($rolesMap['estudiante'])) {
+                $estPersona->roles()->syncWithoutDetaching([
+                    $rolesMap['estudiante'] => [
+                        'asignado_por' => $coordPersona->id ?? $estPersona->id,
+                        'activo' => true,
+                        'asignado_en' => $now,
+                    ]
+                ]);
+            }
+
+            // Crear Estudiante y expediente mínimo si no existen
+            if (! Estudiante::where('persona_id', $estPersona->id)->exists()) {
+                $carreraId = DB::table('carreras')->value('id') ?? null;
+                $est = Estudiante::create([
+                    'persona_id' => $estPersona->id,
+                    'carrera_id' => $carreraId,
+                    'modalidad_egreso' => null,
+                    'es_regular' => true,
+                ]);
+
+                if (Schema::hasTable('expedientes_estudiante')) {
+                    DB::table('expedientes_estudiante')->insert([
+                        'estudiante_id' => $est->id,
+                        'carrera_id' => $carreraId,
+                        'ruta_carnet' => null,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ]);
+                }
+            }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            throw $e; // para ver el error si ocurre
+        }
+    }
+}

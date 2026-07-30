@@ -1,0 +1,691 @@
+/* ==========================================================================
+   ESTILOS ESPECÍFICOS - GESTIÓN DE PROFESIONES
+   ========================================================================== */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+   .main-content {
+    flex-grow: 1;
+    padding: 4rem;
+    min-height: 100vh;
+    width: 100%; /* El ancho es fluido gracias al comportamiento flex del .main-wrapper */
+}
+
+/* Ajuste dinámico del margen izquierdo cuando el sidebar se colapsa */
+#sidebar.collapsed ~ #main-content,
+.sidebar.collapsed ~ .main-content {
+    margin-left: var(--sidebar-width-collapsed, 78px);
+}
+
+/* Alinea y centra la cabecera de la página */
+.main-header {
+    width: 100%;
+    max-width: 110rem; /* Mismo ancho máximo que la tabla para que queden alineados */
+    margin: 0 auto 2rem auto; /* Centrado horizontal */
+}
+
+/* Contenedor principal de la tabla */
+.crud-container {
+    background-color: var(--color-bg-sidebar);
+    border: 0.08rem solid var(--color-border);
+    border-radius: 1rem;
+    box-shadow: 0 0.4rem 1.5rem rgba(0, 0, 0, 0.02);
+    padding: 2rem;
+    
+    /* Cambios para el centrado y ancho óptimo */
+    width: 100%;
+    max-width: 110rem; /* Limita el ancho de la tabla para que se vea elegante */
+    margin: 2rem auto;  /* El 'auto' a los lados centra la caja horizontalmente */
+}
+
+/* Barra superior de herramientas (Filtros y Búsqueda) */
+.table-actions-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+/* Wrapper de búsqueda */
+.search-wrapper {
+    position: relative;
+    flex: 1;
+    min-width: 20rem;
+    max-width: 35rem;
+}
+
+.search-icon {
+    position: absolute;
+    left: 1.2rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-text-muted);
+    font-size: 1.2rem;
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.9rem 1rem 0.9rem 3.2rem;
+    border: 0.08rem solid var(--color-border);
+    border-radius: 0.66rem;
+    font-size: 1.16rem;
+    color: var(--color-text-main);
+    background-color: var(--color-hover-bg);
+    transition: border-color var(--transition-speed), box-shadow var(--transition-speed), background-color var(--transition-speed);
+}
+
+.search-input:focus {
+    border-color: var(--color-brand-blue);
+    outline: none;
+    background-color: var(--color-bg-sidebar);
+    box-shadow: 0 0 0 0.25rem rgba(35, 55, 140, 0.1);
+}
+
+/* Acciones lado derecho (Filtros y botón agregar) */
+.filters-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+}
+
+/* Selector superior de Filtro de Estado */
+.action-select {
+    padding: 0.9rem 2.5rem 0.9rem 1.2rem;
+    border: 0.08rem solid var(--color-border);
+    border-radius: 0.66rem;
+    font-size: 1.16rem;
+    color: var(--color-text-main);
+    background-color: var(--color-bg-sidebar);
+    cursor: pointer;
+    outline: none;
+    transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
+}
+
+.action-select:focus {
+    border-color: var(--color-brand-blue);
+    outline: none;
+    box-shadow: 0 0 0 0.25rem rgba(35, 55, 140, 0.1);
+}
+
+.btn-primary-action {
+    background-color: var(--color-brand-blue);
+    color: var(--color-badge-text);
+    border: none;
+    border-radius: 0.66rem;
+    padding: 0.9rem 1.5rem;
+    font-size: 1.16rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.66rem;
+    transition: background-color var(--transition-speed), transform 0.1s ease;
+}
+
+.btn-primary-action:hover {
+    background-color: #1a2a6c;
+}
+
+.btn-primary-action:active {
+    transform: scale(0.98);
+}
+
+/* ==========================================================================
+   DISEÑO DE LA TABLA
+   ========================================================================== */
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: 0.66rem;
+    border: 0.08rem solid var(--color-border);
+}
+
+.crud-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 1.16rem;
+}
+
+.crud-table th, 
+.crud-table td {
+    padding: 1.33rem 1.5rem;
+    border-bottom: 0.08rem solid var(--color-border);
+    vertical-align: middle;
+}
+
+.crud-table th {
+    background-color: var(--color-hover-bg);
+    color: var(--color-text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 1rem;
+    letter-spacing: 0.05em;
+}
+
+.crud-table tbody tr {
+    transition: background-color var(--transition-speed);
+}
+
+.crud-table tbody tr:hover {
+    background-color: var(--color-hover-bg);
+}
+
+/* Checkbox personalizado básico */
+.custom-checkbox {
+    width: 1.33rem;
+    height: 1.33rem;
+    cursor: pointer;
+    accent-color: var(--color-brand-blue);
+}
+
+/* Estilos de textos internos de la tabla */
+.table-primary-text {
+    font-weight: 600;
+    color: var(--color-text-main);
+    font-size: 1.2rem;
+}
+
+.table-secondary-text {
+    font-size: 1rem;
+    color: var(--color-text-muted);
+}
+
+/* Badges de estado */
+.status-badge {
+    display: inline-block;
+    padding: 0.33rem 0.8rem;
+    border-radius: 1rem;
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.status-active {
+    background-color: #ecfdf5;
+    color: var(--color-brand-green, #10b981);
+    border: 0.08rem solid #a7f3d0;
+}
+
+.status-inactive {
+    background-color: #fef2f2;
+    color: var(--color-danger-text, #ef4444);
+    border: 0.08rem solid #fca5a5;
+}
+
+/* Botones de acción dentro de la tabla */
+.action-buttons {
+    display: flex;
+    gap: 0.8rem;
+}
+
+.btn-action-edit {
+    background-color: var(--color-bg-sidebar);
+    border: 0.08rem solid var(--color-border);
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--color-text-main);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background-color var(--transition-speed), border-color var(--transition-speed);
+}
+
+.btn-action-edit:hover {
+    background-color: var(--color-hover-bg);
+    border-color: var(--color-brand-blue);
+    color: var(--color-brand-blue);
+}
+
+.btn-action-delete {
+    background-color: var(--color-bg-sidebar);
+    border: 0.08rem solid var(--color-border);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.8rem;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: background-color var(--transition-speed), border-color var(--transition-speed);
+}
+
+.btn-action-delete:hover {
+    background-color: var(--color-danger-hover);
+    border-color: var(--color-danger-text);
+    color: var(--color-danger-text);
+}
+
+/* Paginación de la Tabla */
+.table-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 2rem;
+}
+
+/* Contenedor de los números de página */
+.pagination-pages {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pagination-arrow,
+.page-num {
+    background-color: var(--color-bg-sidebar);
+    border: 0.08rem solid var(--color-border);
+    border-radius: 0.5rem;
+    min-width: 2.5rem;
+    height: 2.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    transition: background-color var(--transition-speed), border-color var(--transition-speed);
+}
+
+.page-num.active {
+    background-color: var(--color-active-bg);
+    border-color: var(--color-brand-blue);
+    color: var(--color-brand-blue);
+    font-weight: 600;
+}
+
+.pagination-arrow:hover,
+.page-num:hover:not(.active) {
+    background-color: var(--color-hover-bg);
+    border-color: var(--color-brand-blue);
+    color: var(--color-brand-blue);
+}
+
+.page-separator {
+    color: var(--color-text-muted);
+    padding: 0 0.5rem;
+}
+
+/* ==========================================================================
+   SISTEMA DE ALERTAS FLOTANTES (TOAST)
+   ========================================================================== */
+.alerts-container {
+    position: fixed;
+    top: 2rem;
+    right: 2rem;
+    z-index: 10000; /* Prioridad superior */
+    width: 100%;
+    max-width: 35rem; /* Ancho compacto */
+    margin: 0;
+    pointer-events: none; /* Permite clics a través de la zona vacía */
+}
+
+.alert-message {
+    pointer-events: auto; /* Permite interactuar con la alerta */
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.2rem 1.6rem;
+    border-radius: 0.66rem;
+    font-size: 1.16rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.08);
+    border: 0.08rem solid transparent;
+    animation: slideInRight 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.success-alert {
+    background-color: #ecfdf5;
+    color: #065f46;
+    border-color: #a7f3d0;
+}
+
+.error-alert {
+    background-color: #fef2f2;
+    color: #991b1b;
+    border-color: #fca5a5;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(120%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ==========================================================================
+   ESTILOS DE MODALES (Difuminado)
+   ========================================================================== */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(0.33rem);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-speed) ease;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal-container {
+    background-color: var(--color-bg-sidebar);
+    border-radius: 1rem;
+    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.15);
+    width: 90%;
+    max-width: 45rem;
+    transform: scale(0.95);
+    transition: transform var(--transition-speed) ease;
+}
+
+.modal-overlay.active .modal-container {
+    transform: scale(1);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    border-bottom: 0.08rem solid var(--color-border);
+}
+
+.modal-header h3 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+}
+
+.modal-body {
+    padding: 2rem;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding: 1.5rem 2rem;
+    border-top: 0.08rem solid var(--color-border);
+}
+
+/* Formulario */
+.form-group-row {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    align-items: center;
+}
+
+.form-group-row.align-start {
+    align-items: flex-start;
+}
+
+.input-row-icon {
+    font-size: 1.4rem;
+    color: var(--color-brand-blue);
+    width: 2rem;
+    text-align: center;
+}
+
+.mt-xs {
+    margin-top: 0.4rem;
+}
+
+.input-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.input-container label {
+    font-weight: 600;
+    color: var(--color-text-main);
+    font-size: 1.1rem;
+}
+
+.input-container input[type="text"],
+.input-container textarea,
+.input-container select { 
+    padding: 0.8rem 1rem;
+    border: 0.08rem solid var(--color-border);
+    border-radius: 0.5rem;
+    font-size: 1.16rem;
+    font-family: inherit;
+    color: var(--color-text-main);
+    background-color: var(--color-bg-sidebar);
+    transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
+    width: 100%;
+    outline: none;
+    resize: vertical;
+}
+
+.input-container input:focus,
+.input-container textarea:focus,
+.input-container select:focus { 
+    border-color: var(--color-brand-blue);
+    outline: none;
+    box-shadow: 0 0 0 0.2rem rgba(35, 55, 140, 0.1);
+}
+
+/* Botones */
+.modal-btn {
+    padding: 0.8rem 1.5rem;
+    border-radius: 0.5rem;
+    font-size: 1.16rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--transition-speed), transform 0.1s;
+}
+
+.modal-btn:active {
+    transform: scale(0.98);
+}
+
+.modal-btn.btn-secondary {
+    background-color: var(--color-bg-sidebar);
+    border: 0.08rem solid var(--color-border);
+    color: var(--color-text-main);
+}
+
+.modal-btn.btn-secondary:hover {
+    background-color: var(--color-hover-bg);
+}
+
+.modal-btn.btn-primary {
+    background-color: var(--color-brand-blue);
+    border: none;
+    color: var(--color-badge-text);
+}
+
+.modal-btn.btn-primary:hover {
+    background-color: #1a2a6c;
+}
+
+/* MODAL DE ADVERTENCIA / INHABILITACIÓN */
+.modal-danger-layout .modal-header {
+    border-bottom: none;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.danger-icon-wrapper {
+    width: 5rem;
+    height: 5rem;
+    background-color: var(--color-danger-hover);
+    color: var(--color-danger-text);
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.2rem;
+    margin-bottom: 1.5rem;
+}
+
+.delete-warning-text {
+    font-size: 1.3rem;
+    font-weight: 500;
+    color: var(--color-text-main);
+    margin-bottom: 0.5rem;
+}
+
+.delete-sub-text {
+    font-size: 1.1rem;
+    color: var(--color-text-muted);
+}
+
+.modal-btn.btn-danger {
+    background-color: var(--color-danger-text);
+    border: none;
+    color: var(--color-badge-text);
+}
+
+.modal-btn.btn-danger:hover {
+    background-color: #dc2626;
+}
+
+/* ==========================================================================
+   OPTIMIZACIÓN DE RESOLUCIÓN (Laptops)
+   ========================================================================== */
+@media (max-width: 1366px) {
+    .main-content {
+        padding: 2rem 2.5rem;
+    }
+
+    .crud-container {
+        padding: 1.5rem;
+        margin: 1.5rem auto;
+    }
+
+    .table-actions-bar {
+        margin-bottom: 1.5rem;
+    }
+}
+
+/* ==========================================================================
+   RESPONSIVE (TABLET Y MÓVIL)
+   ========================================================================== */
+@media (max-width: 1024px) {
+    .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+        padding: 8rem 1.5rem 2.5rem 1.5rem;
+    }
+
+    #sidebar.collapsed ~ #main-content,
+    .sidebar.collapsed ~ .main-content {
+        margin-left: 0;
+    }
+
+    .main-header,
+    .crud-container {
+        max-width: 100%;
+        margin-left: 0;
+        margin-right: 0;
+    }
+
+    .crud-container {
+        padding: 1.5rem;
+    }
+}
+
+@media (max-width: 76.8rem) {
+    .table-actions-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1.2rem;
+    }
+
+    .search-wrapper {
+        max-width: 100%;
+        width: 100%;
+    }
+
+    .filters-wrapper {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+        width: 100%;
+    }
+
+    .action-select,
+    .btn-primary-action {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .crud-table th, 
+    .crud-table td {
+        padding: 1rem 0.8rem;
+    }
+
+    .modal-container {
+        width: 95%;
+        margin: 1rem;
+    }
+
+    .modal-header,
+    .modal-body,
+    .modal-footer {
+        padding: 1.2rem 1.5rem;
+    }
+
+    .form-group-row,
+    .form-group-row.align-start {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.8rem;
+    }
+
+    .input-row-icon {
+        display: none; 
+    }
+
+    .modal-footer {
+        flex-direction: column;
+        gap: 0.8rem;
+    }
+
+    .modal-btn {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+/* ==========================================================================
+   ESTILOS DE VALIDACIÓN INTERACTIVA (JS-DYNAMIC)
+   ========================================================================== */
+.val-red {
+    border-color: var(--color-danger-text, #ef4444) !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 38, 38, 0.15) !important;
+}
+
+.val-yellow {
+    border-color: #f59e0b !important;
+    box-shadow: 0 0 0 0.2rem rgba(245, 158, 11, 0.15) !important;
+}
+
+.val-green {
+    border-color: var(--color-brand-green, #10b981) !important;
+    box-shadow: 0 0 0 0.2rem rgba(16, 185, 129, 0.15) !important;
+}

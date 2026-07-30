@@ -1,0 +1,430 @@
+/* ==========================================================================
+   CONTENIDO PRINCIPAL Y CABECERA (MAIN CONTENT)
+   ========================================================================== */
+.main-content {
+    flex-grow: 1;
+    margin-left: var(--sidebar-width-expanded);
+    padding: 4rem;
+    min-height: 100vh;
+    transition: margin-left var(--transition-speed) ease;
+    width: calc(100% - var(--sidebar-width-expanded));
+}
+
+/* 
+   CORRECCIÓN CLAVE: Esta regla ajusta el margen izquierdo y ancho 
+   del contenido cuando el menú lateral se colapsa en escritorio.
+*/
+.sidebar.collapsed + .main-content {
+    margin-left: var(--sidebar-width-collapsed);
+    width: calc(100% - var(--sidebar-width-collapsed));
+}
+
+.main-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 3rem;
+    gap: 1.6rem;
+}
+
+.header-welcome h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    margin-bottom: 0.4rem;
+}
+
+.header-welcome p {
+    font-size: 0.95rem;
+    color: var(--color-text-muted);
+}
+
+.header-date {
+    background-color: #ffffff;
+    border: 0.1rem solid var(--color-border);
+    padding: 1rem 1.6rem;
+    border-radius: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text-main);
+    flex-shrink: 0;
+}
+
+.header-date i {
+    color: var(--color-text-active);
+}
+
+/* ==========================================================================
+   MÉTRICAS (KPIs)
+   ========================================================================== */
+.kpi-grid {
+    display: grid;
+    /* Forzamos 4 columnas en resoluciones de escritorio */
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+.kpi-card {
+    background-color: #ffffff;
+    border: 0.1rem solid var(--color-border);
+    border-radius: 1.2rem;
+    padding: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1.6rem;
+}
+
+.kpi-icon {
+    width: 4.8rem;
+    height: 4.8rem;
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+}
+
+.icon-blue { background-color: #eff6ff; color: #3b82f6; }
+.icon-green { background-color: #ecfdf5; color: #10b981; }
+.icon-purple { background-color: #f5f3ff; color: #8b5cf6; }
+.icon-orange { background-color: #fff7ed; color: #f97316; }
+
+.kpi-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.kpi-title {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    font-weight: 500;
+}
+
+.kpi-value {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+}
+
+/* ==========================================================================
+   ESTRUCTURA DE TRABAJO (DASHBOARD GRID)
+   ========================================================================== */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 30rem;
+    gap: 2.4rem;
+    align-items: start;
+}
+
+.calendar-card {
+    background-color: #ffffff;
+    border: 0.1rem solid var(--color-border);
+    border-radius: 1.6rem;
+    padding: 2.4rem;
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2.4rem;
+}
+
+.calendar-header h2 {
+    font-size: 1.2rem;
+    color: var(--color-text-main);
+}
+
+/* Estilos de las etiquetas de tipo de actividad */
+.event-tag {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.4rem 1rem;
+    border-radius: 0.6rem;
+    display: inline-block;
+}
+
+.badge-taller { background-color: #eff6ff; color: var(--color-event-taller); border-left: 0.3rem solid var(--color-event-taller); }
+.badge-foro { background-color: #ecfdf5; color: var(--color-event-foro); border-left: 0.3rem solid var(--color-event-foro); }
+.badge-charla { background-color: #f5f3ff; color: var(--color-event-charla); border-left: 0.3rem solid var(--color-event-charla); }
+
+/* ==========================================================================
+   PANEL LATERAL (TRÁMITES / EXPEDIENTE)
+   ========================================================================== */
+.filter-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 2.4rem;
+}
+
+.panel-section {
+    background-color: #ffffff;
+    border: 0.1rem solid var(--color-border);
+    border-radius: 1.2rem;
+    padding: 2rem;
+}
+
+.panel-section h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    margin-bottom: 1.6rem;
+    border-bottom: 0.1rem solid var(--color-border);
+    padding-bottom: 0.8rem;
+}
+
+/* Botones de acción lateral */
+.action-btn {
+    width: 100%;
+    padding: 1rem;
+    border-radius: 0.6rem;
+    border: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+    transition: background-color var(--transition-speed);
+}
+
+.btn-primary-action {
+    background-color: var(--color-text-active);
+    color: #ffffff;
+}
+
+.btn-primary-action:hover {
+    background-color: #1d4ed8;
+}
+
+.btn-secondary-action {
+    background-color: var(--color-bg-body);
+    border: 0.1rem solid var(--color-border);
+    color: var(--color-text-main);
+}
+
+.btn-secondary-action:hover {
+    background-color: var(--color-border);
+}
+
+/* ==========================================================================
+   MODAL PARA EL CÓDIGO QR
+   ========================================================================== */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(15, 23, 42, 0.4); 
+    backdrop-filter: blur(0.2rem);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-speed) ease;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal-container {
+    background-color: #ffffff;
+    width: 90%;
+    max-width: 45rem;
+    border-radius: 1.2rem;
+    padding: 2.4rem;
+    box-shadow: 0 1rem 2.5rem -0.5rem rgba(0, 0, 0, 0.1);
+    transform: translateY(-2rem);
+    transition: transform var(--transition-speed) ease;
+}
+
+.modal-overlay.active .modal-container {
+    transform: translateY(0);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 0.1rem solid var(--color-border);
+    padding-bottom: 1.2rem;
+    margin-bottom: 1.6rem;
+}
+
+.modal-header h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.6rem;
+    color: var(--color-text-muted);
+    cursor: pointer;
+}
+
+.modal-detail-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.2rem;
+    margin-bottom: 1.4rem;
+}
+
+.modal-detail-row i {
+    font-size: 1.1rem;
+    color: var(--color-text-active);
+    margin-top: 0.2rem;
+    width: 2rem;
+    text-align: center;
+}
+
+.modal-detail-row strong {
+    font-size: 0.85rem;
+    color: var(--color-text-main);
+    display: block;
+}
+
+.modal-detail-row p {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.8rem;
+    border-top: 0.1rem solid var(--color-border);
+    padding-top: 1.6rem;
+    margin-top: 1.6rem;
+}
+
+.modal-btn {
+    padding: 0.8rem 1.6rem;
+    border-radius: 0.6rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+}
+
+.modal-btn.btn-secondary {
+    background-color: var(--color-bg-body);
+    color: var(--color-text-main);
+    border: 0.1rem solid var(--color-border);
+}
+
+.modal-btn.btn-secondary:hover {
+    background-color: var(--color-border);
+}
+
+/* ==========================================================================
+   OPTIMIZACIÓN INTERMEDIA (Para resoluciones como 1280x800 y laptops)
+   ========================================================================== */
+@media (max-width: 1366px) {
+    .main-content {
+        padding: 2rem; /* Reducción de padding lateral para ganar área */
+    }
+
+    .main-header {
+        margin-bottom: 2rem;
+    }
+
+    .kpi-grid {
+        gap: 1.4rem;
+        margin-bottom: 2rem;
+    }
+
+    .kpi-card {
+        padding: 1.4rem;
+        gap: 1rem;
+    }
+
+    .kpi-icon {
+        width: 3.8rem;
+        height: 3.8rem;
+    }
+
+    .dashboard-grid {
+        /* Estrechamos la columna de trámites para darle prioridad a la agenda */
+        grid-template-columns: 1fr 24rem; 
+        gap: 1.8rem;
+    }
+
+    .calendar-card {
+        padding: 1.8rem;
+    }
+}
+
+/* ==========================================================================
+   DISEÑO RESPONSIVO (MEDIA QUERIES) -> Solo de 1024px hacia abajo
+   ========================================================================== */
+@media (max-width: 1024px) {
+    .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+        padding: 8rem 1.6rem 2.4rem 1.6rem; /* Margen para no chocar con la mobile-top-bar */
+    }
+
+    /* En tabletas y móviles permitimos el reordenamiento fluido de las KPIs */
+    .kpi-grid {
+        grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+    }
+
+    /* Convertido a flexbox con estiramiento horizontal */
+    .dashboard-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 2.4rem;
+        align-items: stretch;
+    }
+
+    /* Rompe el contenedor de filtros para posicionar sus secciones */
+    .filter-panel {
+        display: contents;
+    }
+
+    /* "Acciones del Docente" (Panel lateral inferior) queda arriba */
+    .filter-panel > .panel-section:nth-child(2) {
+        order: 1;
+    }
+
+    /* "Filtros de Agenda" (Panel lateral superior) queda en medio */
+    .filter-panel > .panel-section:nth-child(1) {
+        order: 2;
+    }
+
+    /* "Mis Sesiones y Clases Programadas" (.calendar-card) queda abajo */
+    .calendar-card {
+        order: 3;
+    }
+}
+
+@media (max-width: 76.8rem) {
+    .main-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1.2rem;
+    }
+
+    .header-date {
+        align-self: flex-start;
+    }
+
+    .calendar-card {
+        padding: 1.6rem;
+    }
+}

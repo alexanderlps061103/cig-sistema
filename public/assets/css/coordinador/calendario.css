@@ -1,0 +1,178 @@
+/* ==========================================================================
+   ESTILOS EXCLUSIVOS DEL COMPONENTE CALENDARIO
+   ========================================================================== */
+.calendar-card {
+    background-color: #ffffff;
+    border: 0.1rem solid var(--color-border);
+    border-radius: var(--radius-lg);       /* Usamos radio estándar grande */
+    padding: var(--space-lg);              /* Relleno uniforme de 2.4rem (24px) */
+    overflow-x: auto;
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-lg);        /* Separación proporcional de 2.4rem */
+    gap: var(--space-md);                  /* Espacio entre elementos de 1.2rem */
+    flex-wrap: nowrap;
+}
+
+.calendar-header h2 {
+    font-size: var(--text-lg);             /* Subtítulo principal (1.8rem) */
+    color: var(--color-text-main);
+    white-space: nowrap;
+    font-weight: 700;
+}
+
+.calendar-navigation {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);                  /* Espacio uniforme entre flechas y mes */
+    flex-shrink: 0;
+}
+
+.cal-nav-btn {
+    background: none;
+    border: 0.1rem solid var(--color-border);
+    width: 3.2rem;                         /* Dimensiones físicas fijas para mantener forma circular */
+    height: 3.2rem;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: var(--text-sm);             /* Flechas legibles a 1.3rem */
+    color: var(--color-text-main);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color var(--transition-speed, 0.3s) ease;
+}
+
+.cal-nav-btn:hover {
+    background-color: var(--color-hover-bg, #f1f5f9);
+}
+
+.current-month-year {
+    font-size: var(--text-md);             /* Nombre del mes a 1.6rem destacado */
+    font-weight: 700;
+    color: var(--color-text-main);
+    white-space: nowrap;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(4rem, 1fr));
+    gap: var(--space-sm);                  /* Separación entre celdas de 0.8rem */
+}
+
+.day-name {
+    text-align: center;
+    font-weight: 600;
+    font-size: var(--text-sm);             /* Días de la semana legibles a 1.3rem */
+    color: var(--color-text-muted);
+    padding: var(--space-sm) 0;            /* Relleno uniforme */
+}
+
+.day-cell {
+    background-color: #ffffff;
+    border: 0.1rem solid var(--color-border);
+    border-radius: var(--radius-md);       /* Esquinas redondeadas estándar (0.8rem) */
+    min-height: 9rem;                      /* Altura mínima física del día */
+    padding: var(--space-sm);              /* Espaciado interno de 0.8rem */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: border-color var(--transition-speed, 0.3s) ease;
+}
+
+.day-cell:hover {
+    border-color: var(--color-text-active);
+}
+
+.day-cell span {
+    font-size: var(--text-base);           /* Número del día estándar (1.4rem) */
+    font-weight: 600;
+    color: var(--color-text-main);
+}
+
+.day-cell.prev-month span {
+    color: var(--color-text-muted);
+    font-weight: 400;
+}
+
+/* Eventos dentro del calendario */
+.event-tag {
+    font-size: var(--text-xs);             /* El tamaño más pequeño legible (1.1rem) */
+    font-weight: 600;
+    padding: var(--space-xs) 0.6rem;       /* 0.4rem arriba/abajo, 0.6rem a los lados */
+    border-radius: var(--radius-sm);       /* Bordes pequeños (0.4rem) */
+    margin-top: var(--space-xs);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: opacity var(--transition-speed, 0.3s) ease;
+}
+
+.event-tag:hover {
+    opacity: 0.8;
+}
+
+.badge-taller { 
+    background-color: #eff6ff; 
+    color: var(--color-event-taller, #2563eb); 
+    border-left: 0.3rem solid var(--color-event-taller, #2563eb); 
+}
+
+.badge-foro { 
+    background-color: #ecfdf5; 
+    color: var(--color-event-foro, #10b981); 
+    border-left: 0.3rem solid var(--color-event-foro, #10b981); 
+}
+
+.badge-charla { 
+    background-color: #f5f3ff; 
+    color: var(--color-event-charla, #8b5cf6); 
+    border-left: 0.3rem solid var(--color-event-charla, #8b5cf6); 
+}
+
+.badge-feriado {
+    background-color: #fef2f2;                     
+    color: #ef4444;                                
+    border-left: 0.3rem solid #ef4444;             
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);                  /* Separación del icono e icono de 0.4rem */
+}
+
+/* ==========================================================================
+   DISEÑO RESPONSIVO DEL CALENDARIO
+   ========================================================================== */
+/* 
+   Nota: Al cambiar el font-size de la etiqueta <html> en el archivo base,
+   el calendario ya se encoge proporcionalmente en pantallas de 1366px 
+   sin necesidad de duplicar reglas aquí. Solo mantendremos las necesarias.
+*/
+
+@media (max-width: 76.8rem) { /* 768px */
+    .calendar-card {
+        padding: var(--space-df);          /* 1.6rem */
+    }
+
+    .calendar-header h2 {
+        font-size: var(--text-md);         /* Se reduce a 1.6rem de forma segura */
+    }
+
+    .day-cell {
+        min-height: 7rem; 
+        padding: var(--space-xs);          /* Relleno de 0.4rem */
+    }
+
+    .day-cell span {
+        font-size: var(--text-sm);         /* 1.3rem */
+    }
+
+    .event-tag {
+        font-size: var(--text-xs);         /* Mantenemos el mínimo legible de 1.1rem */
+        padding: 0.2rem var(--space-xs);
+    }
+}

@@ -4,8 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SolicitudInduccion extends Model
 {
@@ -15,24 +13,33 @@ class SolicitudInduccion extends Model
 
     protected $fillable = [
         'estudiante_id',
+        'expediente_id',
+        'tipo',
         'estado',
         'observacion',
         'fecha_solicitud',
         'fecha_respuesta',
+        'cartas_activas',
     ];
 
     protected $casts = [
         'fecha_solicitud' => 'datetime',
         'fecha_respuesta' => 'datetime',
+        'cartas_activas' => 'integer',
     ];
 
-    public function estudiante(): BelongsTo
+    public function estudiante()
     {
-        return $this->belongsTo(Persona::class, 'estudiante_id');
+        return $this->belongsTo(Estudiante::class, 'estudiante_id');
     }
 
-    public function inducciones(): HasMany
+    public function expediente()
     {
-        return $this->hasMany(Induccion::class, 'solicitud_id');
+        return $this->belongsTo(ExpedienteEstudiante::class, 'expediente_id');
+    }
+
+    public function induccion()
+    {
+        return $this->hasOne(Induccion::class, 'solicitud_id');
     }
 }
