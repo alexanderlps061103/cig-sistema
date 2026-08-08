@@ -8,13 +8,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('solicitudes_empleo', function (Blueprint $table) {
+        Schema::create('postulaciones_ponentes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('persona_id')->constrained('personas')->cascadeOnDelete();
-            $table->text('mensaje')->nullable();
+            $table->string('area_especialidad');
+            $table->text('resumen_propuesta')->nullable();
+            $table->string('archivo_curriculum')->nullable();
             $table->enum('estado', ['pendiente', 'aprobada', 'rechazada'])->default('pendiente');
-            $table->foreignId('revisado_por')->nullable()->constrained('personas')->nullOnDelete();
-            $table->timestamp('fecha_revision')->nullable();
+            $table->foreignId('evaluado_por')->nullable()->constrained('personas')->nullOnDelete(); // Coordinador General
+            $table->text('observaciones_coordinador')->nullable();
             $table->timestamps();
 
             $table->index(['persona_id', 'estado']);
@@ -23,6 +25,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('solicitudes_empleo');
+        Schema::dropIfExists('postulaciones_ponentes');
     }
 };
