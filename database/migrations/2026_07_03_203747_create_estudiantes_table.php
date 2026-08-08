@@ -13,6 +13,7 @@ return new class extends Migration
             $table->foreignId('persona_id')->unique()->constrained('personas')->cascadeOnDelete();
             $table->unsignedBigInteger('carrera_id')->nullable();
             $table->enum('modalidad_egreso', ['pasantia', 'acreditacion'])->nullable();
+            $table->foreignId('organizacion_id')->after('carrera_id')->nullable()->constrained('organizaciones')->nullOnDelete();
             $table->boolean('es_regular')->default(false);
             $table->timestamps();
 
