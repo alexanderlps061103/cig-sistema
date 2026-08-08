@@ -13,7 +13,9 @@ return new class extends Migration
     {
         Schema::create('configuraciones_documentos', function (Blueprint $table) {
             $table->id();
-            
+            $table->string('clave')->unique(); // Ej: 'firma_rector', 'sello_centro', 'kit_induccion_link'
+            $table->text('valor'); // Ruta del archivo o ID
+            $table->string('descripcion')->nullable();
             $table->timestamps();
         });
     }
