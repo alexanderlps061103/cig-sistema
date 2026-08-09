@@ -13,7 +13,14 @@ class Persona extends Model
     protected $table = 'personas';
 
     protected $fillable = [
-        'nombres','apellidos','cedula','telefono','sexo','foto','cedula_imagen','verified_at'
+        'nombres',
+        'apellidos',
+        'cedula',
+        'telefono',
+        'sexo',
+        'foto',
+        'cedula_imagen',
+        'verified_at'
     ];
 
     protected $casts = [
