@@ -112,4 +112,9 @@ class Usuario extends Authenticatable
 
         return $docente->tutoriasAsignadas();
     }
+    // Helper para chequear rol desde Usuario
+    public function hasRole(string $roleName): bool
+    {
+        return $this->persona && $this->persona->roles->contains('nombre', $roleName);
+    }
 }
