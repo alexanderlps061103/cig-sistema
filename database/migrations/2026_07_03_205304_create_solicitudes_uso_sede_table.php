@@ -32,7 +32,7 @@ return new class extends Migration {
             $table->text('detalle_colaboracion')->nullable(); // Ej: "1 Bombona de gas, 2 cloro"
 
             // Control Administrativo
-            $table->enum('estado', ['pendiente', 'aprobada', 'rechazada', 'ejecutada']).default('pendiente');
+            $table->enum('estado', ['pendiente', 'aprobada', 'rechazada', 'ejecutada'])->default('pendiente');
             $table->foreignId('verificado_por')->nullable()->constrained('personas'); // Coordinador General
             $table->timestamp('fecha_verificacion')->nullable();
 
