@@ -20,7 +20,7 @@ return new class extends Migration
             $table->foreign('id_salon')->references('id_salon')->on('salones')->onDelete('set null');
 
             $table->foreignId('persona_id')->nullable()->constrained('personas')->nullOnDelete();
-            $table->foreignId('solicitud_uso_id')->after('persona_id')->nullable()->constrained('solicitudes_uso_sede')->nullOnDelete();
+            $table->foreignId('solicitud_uso_id')->nullable()->constrained('solicitudes_uso_sede')->nullOnDelete();
             $table->timestamps();
         });
     }
