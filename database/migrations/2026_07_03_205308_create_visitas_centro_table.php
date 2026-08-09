@@ -14,12 +14,13 @@ return new class extends Migration
             $table->string('cedula')->nullable();
             $table->string('motivo_visita');
             $table->date('fecha_visita');
-            
+
             // CORREGIDO: Apuntamos de manera explícita a la tabla 'salones' y a su PK 'id_salon'
             $table->unsignedBigInteger('id_salon')->nullable();
             $table->foreign('id_salon')->references('id_salon')->on('salones')->onDelete('set null');
-            
+
             $table->foreignId('persona_id')->nullable()->constrained('personas')->nullOnDelete();
+            $table->foreignId('solicitud_uso_id')->after('persona_id')->nullable()->constrained('solicitudes_uso_sede')->nullOnDelete();
             $table->timestamps();
         });
     }
