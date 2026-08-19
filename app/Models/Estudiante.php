@@ -32,6 +32,11 @@ class Estudiante extends Model
     }
 
     public function organizacion() { return $this->belongsTo(Organizacion::class); }
+
+    public function controlFisico() { return $this->hasOne(ControlDocumentoFisico::class); }
+
+    public function acreditacion() { return $this->hasOne(AcreditacionExperiencia::class); }
+    
     public function inducciones()
     {
         return $this->hasMany(Induccion::class, 'estudiante_id');
