@@ -10,7 +10,7 @@ class Estudiante extends Model
     use HasFactory;
 
     protected $table = 'estudiantes';
-    protected $fillable = ['persona_id','carrera_id','modalidad_egreso','es_regular'];
+    protected $fillable = ['persona_id','carrera_id','modalidad_egreso','es_regular', 'organizacion_id'];
 
     protected $casts = [
         'es_regular' => 'boolean',
