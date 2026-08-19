@@ -6,24 +6,16 @@ use Illuminate\Database\Eloquent\Model;
 
 class Organizacion extends Model
 {
-    // Nombre de la tabla en plural como definimos en la migración
     protected $table = 'organizaciones';
+    protected $fillable = ['rif', 'nombre_razon_social', 'direccion', 'telefono_contacto', 'persona_contacto'];
 
-    protected $fillable = [
-        'rif',
-        'nombre_razon_social',
-        'direccion',
-        'telefono_contacto',
-        'email_contacto',
-        'persona_contacto',
-        'estado'
-    ];
+    // Relación con los procesos de acreditación
+    public function acreditaciones() {
+        return $this->hasMany(AcreditacionExperiencia::class, 'organizacion_id');
+    }
 
-    /**
-     * Una organización puede tener muchos estudiantes haciendo pasantías.
-     */
-    public function estudiantes()
-    {
-        return $this->hasMany(Estudiante::class, 'organizacion_id');
+    // Relación con los expedientes de pasantía regular
+    public function expedientes() {
+        return $this->hasMany(ExpedienteEstudiante::class, 'organizacion_id');
     }
 }
