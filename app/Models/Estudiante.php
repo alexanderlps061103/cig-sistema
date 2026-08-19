@@ -10,7 +10,11 @@ class Estudiante extends Model
     use HasFactory;
 
     protected $table = 'estudiantes';
-    protected $fillable = ['persona_id','carrera_id','modalidad_egreso','es_regular', 'organizacion_id'];
+    protected $fillable = [
+        'persona_id',
+        'carrera_id',
+        'modalidad_egreso',
+        'es_regular'];
 
     protected $casts = [
         'es_regular' => 'boolean',
@@ -31,11 +35,15 @@ class Estudiante extends Model
         return $this->hasOne(ExpedienteEstudiante::class, 'estudiante_id');
     }
 
-    public function organizacion() { return $this->belongsTo(Organizacion::class, 'organizacion_id'); }
 
-    public function controlFisico() { return $this->hasOne(ControlDocumentoFisico::class, 'estudiante_id'); }
 
-    public function acreditacion() { return $this->hasOne(AcreditacionExperiencia::class, 'estudiante_id'); }
+    public function controlFisico()
+
+    { return $this->hasOne(ControlDocumentoFisico::class, 'estudiante_id'); }
+
+    public function acreditacion()
+
+    { return $this->hasOne(AcreditacionExperiencia::class, 'estudiante_id'); }
 
     public function inducciones()
     {
