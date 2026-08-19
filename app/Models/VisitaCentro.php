@@ -17,9 +17,9 @@ class VisitaCentro extends Model
 
      protected $casts = ['fecha_visita' => 'date'];
 
-    public function espacio()
+    public function salon()
     {
-        return $this->belongsTo(Espacio::class, 'espacio_id');
+        return $this->belongsTo(Salon::class, 'salon_id');
     }
 
     public function persona()
