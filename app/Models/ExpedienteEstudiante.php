@@ -14,6 +14,7 @@ class ExpedienteEstudiante extends Model
     protected $fillable = [
         'estudiante_id',
         'carrera_id',
+        'organizacion_id',
         'ruta_carnet',
         'carnet_verificado_at',
         'ruta_notas_certificadas',
@@ -47,5 +48,10 @@ class ExpedienteEstudiante extends Model
     public function tutorAsignado()
     {
         return $this->belongsTo(Docente::class, 'tutor_asignado_id');
+    }
+
+    public function organizacion()
+    {
+        return $this->belongsTo(Organizacion::class, 'organizacion_id');
     }
 }
