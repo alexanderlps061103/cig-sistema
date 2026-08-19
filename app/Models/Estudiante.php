@@ -31,12 +31,12 @@ class Estudiante extends Model
         return $this->hasOne(ExpedienteEstudiante::class, 'estudiante_id');
     }
 
-    public function organizacion() { return $this->belongsTo(Organizacion::class); }
+    public function organizacion() { return $this->belongsTo(Organizacion::class, 'organizacion_id'); }
 
-    public function controlFisico() { return $this->hasOne(ControlDocumentoFisico::class); }
+    public function controlFisico() { return $this->hasOne(ControlDocumentoFisico::class, 'estudiante_id'); }
 
-    public function acreditacion() { return $this->hasOne(AcreditacionExperiencia::class); }
-    
+    public function acreditacion() { return $this->hasOne(AcreditacionExperiencia::class, 'estudiante_id'); }
+
     public function inducciones()
     {
         return $this->hasMany(Induccion::class, 'estudiante_id');
