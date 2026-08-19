@@ -16,6 +16,9 @@ class ControlDocumentoFisico extends Model
         'verificado_por'
     ];
 
-    public function estudiante() { return $this->belongsTo(Estudiante::class); }
-    public function verificador() { return $this->belongsTo(Persona::class, 'verificado_por'); }
+    public function estudiante()
+     { return $this->belongsTo(Estudiante::class, 'estudiante_id'); }
+     
+    public function verificador()
+    { return $this->belongsTo(Persona::class, 'verificado_por'); }
 }
