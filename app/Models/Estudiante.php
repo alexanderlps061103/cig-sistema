@@ -31,6 +31,7 @@ class Estudiante extends Model
         return $this->hasOne(ExpedienteEstudiante::class, 'estudiante_id');
     }
 
+    public function organizacion() { return $this->belongsTo(Organizacion::class); }
     public function inducciones()
     {
         return $this->hasMany(Induccion::class, 'estudiante_id');
