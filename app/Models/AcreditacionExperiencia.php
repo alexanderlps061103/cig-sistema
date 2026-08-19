@@ -10,6 +10,7 @@ class AcreditacionExperiencia extends Model
 
     protected $fillable = [
         'estudiante_id',
+        'organizacion_id',
         'motivos_solicitud',
         'archivo_formato_1',
         'archivo_evidencias_digitales',
@@ -22,5 +23,10 @@ class AcreditacionExperiencia extends Model
     public function estudiante()
     {
         return $this->belongsTo(Estudiante::class, 'estudiante_id');
+    }
+
+    public function organizacion() {
+        
+        return $this->belongsTo(Organizacion::class, 'organizacion_id');
     }
 }
